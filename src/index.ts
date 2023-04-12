@@ -1,3 +1,1 @@
-import { add } from "./myModule";
-
-export { add };
+// export { add };
