@@ -1,0 +1,43 @@
+{
+  "name": "typescript-npm-package-template",
+  "version": "0.0.1",
+  "description": "",
+  "author": "Juro Oravec <juraj.oravec.josefson@gmail.com>",
+  "homepage": "https://github.com/zaki-yama/typescript-npm-package-template#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zaki-yama/typescript-npm-package-template.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zaki-yama/typescript-npm-package-template/issues"
+  },
+  "license": "MIT",
+  "keywords": [],
+  "files": [
+    "lib",
+    "esm",
+    "umd"
+  ],
+  "main": "lib/index.js",
+  "module": "esm/index.js",
+  "types": "lib/index.d.js",
+  "scripts": {
+    "build": "npm run build:cjs && npm run build:esm && npm run build:umd",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build:umd": "webpack",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.33.0",
+    "@typescript-eslint/parser": "^4.33.0",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^6.15.0",
+    "eslint-plugin-prettier": "^3.4.1",
+    "prettier": "^2.5.1",
+    "ts-loader": "^8.3.0",
+    "typescript": "^4.6.2",
+    "webpack": "^4.46.0",
+    "webpack-cli": "^3.3.7"
+  }
+}
