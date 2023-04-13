@@ -10,6 +10,6 @@
     },
     "input": "./input_schema.json",
     "storages": {
-      "dataset": "./dataset_schema.json"
+      "dataset": "./output_schema.json"
     }
 }
