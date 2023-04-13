@@ -18,20 +18,16 @@
     "store",
     "scraper"
   ],
-  "files": [
-    "lib",
-    "esm",
-    "umd"
-  ],
-  "main": "lib/index.js",
-  "module": "esm/index.js",
-  "types": "lib/index.d.js",
+  "files": ["dist"],
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/cjs/index.d.js",
   "engines": {
     "node": ">=16.0.0"
   },
   "scripts": {
     "start": "npm run start:dev",
-    "start:prod": "node esm/index.js",
+    "start:prod": "node dist/cjs/index.js",
     "start:dev": "ts-node ./src/index.ts",
     "build": "npm run build:esm",
     "build:all": "npm run build:cjs && npm run build:esm && npm run build:umd",
