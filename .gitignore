@@ -2,6 +2,9 @@ lib
 esm
 umd
 
+# apify
+storage/
+
 # Logs
 logs
 *.log

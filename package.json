@@ -12,7 +12,12 @@
     "url": "https://github.com/jurooravec/apify-actor-apify-store/issues"
   },
   "license": "MIT",
-  "keywords": ["apify", "actor", "store", "scraper"],
+  "keywords": [
+    "apify",
+    "actor",
+    "store",
+    "scraper"
+  ],
   "files": [
     "lib",
     "esm",
@@ -21,16 +26,27 @@
   "main": "lib/index.js",
   "module": "esm/index.js",
   "types": "lib/index.d.js",
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "scripts": {
-    "build": "npm run build:cjs && npm run build:esm && npm run build:umd",
+    "start": "npm run start:dev",
+    "start:prod": "node esm/index.js",
+    "start:dev": "ts-node ./src/index.ts",
+    "build": "npm run build:esm",
+    "build:all": "npm run build:cjs && npm run build:esm && npm run build:umd",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:esm": "tsc -p tsconfig.esm.json",
     "build:umd": "webpack",
+    "lint": "eslint ./src --ext .ts",
+    "lint:fix": "eslint ./src --ext .ts --fix",
     "migrate": "ts-node ./src/actor-migrations/migrate-cli.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.192",
     "@types/node": "^18.15.11",
+    "@types/node-fetch": "^2.6.3",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "eslint": "^7.32.0",
@@ -44,9 +60,15 @@
     "webpack-cli": "^3.3.7"
   },
   "dependencies": {
+    "apify": "^3.1.4",
     "apify-client": "^2.7.1",
     "commander": "^10.0.0",
+    "crawlee": "^3.3.1",
     "dotenv": "^16.0.3",
-    "glob": "^10.0.0"
+    "glob": "^10.0.0",
+    "got": "^12.6.0",
+    "lodash": "^4.17.21",
+    "node-fetch": "^2.6.6",
+    "playwright": "^1.32.3"
   }
 }
