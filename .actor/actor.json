@@ -3,7 +3,7 @@
     "name": "apify-store-scraper",
     "title": "Apify Store Scraper",
     "description": "Extract all Actors from the Apify Store. Includes cost, trial minutes, number of users, number of builds, version, author, and more",
-    "version": "0.3",
+    "version": "1.0",
     "dockerfile": "./Dockerfile",
     "meta": {
         "templateId": "ts-crawlee-playwright-chrome"
