@@ -1,0 +1,12 @@
+{
+    "actorSpecification": 1,
+    "name": "apify-store-scraper",
+    "title": "Apify Store Scraper",
+    "description": "Scrape Apify Store Actors.",
+    "version": "0.0.1",
+    "meta": {
+        "templateId": "ts-crawlee-playwright-chrome"
+    },
+    "input": "./input_schema.json",
+    "dockerfile": "./Dockerfile"
+}
