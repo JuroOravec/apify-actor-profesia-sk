@@ -115,9 +115,12 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
         // Click on a category button and wait till it loads
         log.info(`Clicking on category "${await categLocator.textContent()}"`);
         await categLocator.click();
-        // Wait for the network request we want to intercept
-        log.info(`Waiting for response for category "${await categLocator.textContent()}"`);
-        await page.waitForResponse((res) => storePage.urlIsItemsQuery(res.url()));
+
+        if (!process.env.APIFY_IS_AT_HOME) {
+          // Wait for the network request we want to intercept
+          log.info(`Waiting for response for category "${await categLocator.textContent()}"`);
+          await page.waitForResponse((res) => storePage.urlIsItemsQuery(res.url()));
+        }
 
         await new Promise((res) => setTimeout(res, 500));
       }
