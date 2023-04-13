@@ -115,6 +115,10 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
         // Click on a category button and wait till it loads
         log.info(`Clicking on category "${await categLocator.textContent()}"`);
         await categLocator.click();
+        // Wait for the network request we want to intercept
+        log.info(`Waiting for response for category "${await categLocator.textContent()}"`);
+        await page.waitForResponse((res) => storePage.urlIsItemsQuery(res.url()));
+
         await new Promise((res) => setTimeout(res, 500));
       }
 
@@ -155,9 +159,10 @@ const STORE_PAGE_FETCH_ITEMS_DEFAULT_FETCH_OPTIONS = {
 
 /** Actions defined for the store page */
 const storePage = {
-  urlIsItemsQuery: (url: URL) => {
+  urlIsItemsQuery: (inputUrl: URL | string) => {
+    const url = typeof inputUrl === 'string' ? inputUrl : inputUrl.href;
     // https://ow0o5i3qo7-dsn.algolia.net/1/indexes/prod_PUBLIC_STORE/query
-    return url.href.includes('algolia.net/1/indexes/prod_PUBLIC_STORE/query');
+    return url.includes('algolia.net/1/indexes/prod_PUBLIC_STORE/query');
   },
 
   getCategories: async ({
