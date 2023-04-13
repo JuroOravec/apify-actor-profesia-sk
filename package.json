@@ -1,7 +1,8 @@
 {
   "name": "apify-actor-apify-store",
-  "version": "0.1.0",
-  "description": "",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Apify Actor that scrapes Apify Store Actors",
   "author": "Juro Oravec <juraj.oravec.josefson@gmail.com>",
   "homepage": "https://github.com/jurooravec/apify-actor-apify-store#readme",
   "repository": {

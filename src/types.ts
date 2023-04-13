@@ -1,5 +1,12 @@
 export type MaybePromise<T> = T | Promise<T>;
 
+/** Shape of the data passed to the actor from Apify */
+export interface ApifyStoreActorInput {
+  startUrls: string[];
+  query?: string;
+  category?: string;
+}
+
 export interface CategoriesQueryRequestPayload {
   query: string;
   /** Eg `0` */

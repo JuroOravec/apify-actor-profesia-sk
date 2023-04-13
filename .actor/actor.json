@@ -2,8 +2,8 @@
     "actorSpecification": 1,
     "name": "apify-store-scraper",
     "title": "Apify Store Scraper",
-    "description": "Scrape Apify Store Actors.",
-    "version": "0.1",
+    "description": "Scrape Apify Store Actors",
+    "version": "0.2",
     "meta": {
         "templateId": "ts-crawlee-playwright-chrome"
     },

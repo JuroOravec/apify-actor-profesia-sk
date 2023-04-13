@@ -1,18 +1,35 @@
 {
-    "title": "Apify Store Scraper",
-    "type": "object",
-    "schemaVersion": 1,
-    "properties": {
-        "startUrls": {
-            "title": "Start URLs",
-            "type": "array",
-            "description": "URLs to start with.",
-            "editor": "requestListSources",
-            "prefill": [
-                {
-                    "url": "https://apify.com/store"
-                }
-            ]
-        }
-    }
+  "title": "Apify Store Scraper input",
+  "description": "Shubidi dubi",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+      "startUrls": {
+          "title": "Start URLs",
+          "type": "array",
+          "description": "URLs to start with",
+          "prefill": [
+              { "url": "https://apify.com/store" }
+          ],
+          "editor": "requestListSources"
+      },
+      "query": {
+          "type": "string",
+          "title": "Search query",
+          "description": "If given, only actors matching the query will be retrieved",
+          "example": "facebook",
+          "editor": "textfield"
+      },
+      "category": {
+          "type": "string",
+          "title": "Actory category",
+          "description": "If given, only actors from this category will be retried",
+          "example": "facebook",
+          "editor": "select",
+          "enum": ["AI", "AUTOMATION", "BUSINESS", "COVID_19", "DEVELOPER_EXAMPLES", "DEVELOPER_TOOLS", "ECOMMERCE", "GAMES", "JOBS", "MARKETING", "NEWS", "SEO_TOOLS", "SOCIAL_MEDIA", "TRAVEL", "VIDEOS", "REAL_ESTATE", "SPORTS", "EDUCATION", "OTHER"],
+          "enumTitles": ["AI", "Automation", "Business", "Covid-19", "Developer Examples", "Developer Tools", "E-commerce", "Games", "Jobs", "Marketing", "News", "SEO Tools", "Social media", "Travel", "Videos", "Real estate", "Sports", "Education", "Other"],
+          "nullable": true
+      }
+  },
+  "required": ["startUrls"]
 }

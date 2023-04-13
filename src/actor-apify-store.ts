@@ -1,42 +1,54 @@
 import { Actor, Log } from 'apify';
-import { PlaywrightCrawler, createPlaywrightRouter } from 'crawlee';
+import { PlaywrightCrawler } from 'crawlee';
 import type { Page, Route } from 'playwright';
 import fetch from 'node-fetch';
 import { pick } from 'lodash';
 
 import type {
   ApifyActorStoreItem,
+  ApifyStoreActorInput,
   CategoriesQueryRequestPayload,
   CategoriesQueryResponsePayload,
   MaybePromise,
 } from './types';
 
 export const run = async (): Promise<void> => {
-  const startUrls = ['https://apify.com/store'];
-
   // See docs:
   // - https://docs.apify.com/sdk/js/
   // - https://docs.apify.com/academy/deploying-your-code/inputs-outputs#accepting-input-with-the-apify-sdk
   // - https://docs.apify.com/sdk/js/docs/upgrading/upgrading-to-v3#apify-sdk
   await Actor.main(
     async () => {
-      const crawler = await createCrawler();
+      const { startUrls, query, category } = (await Actor.getInput<ApifyStoreActorInput>()) || {};
+
+      const crawler = await createCrawler({
+        query,
+        categoriesByText: category ? [category] : undefined,
+      });
+
       await crawler.run(startUrls);
     },
     { statusMessage: 'Crawling finished!' }
   );
 };
 
-const createCrawler = async () => {
-  const proxyConfiguration = await Actor.createProxyConfiguration();
+interface ApifyStoreActorOptions {
+  query?: string;
+  categoriesByText?: string[];
+}
+
+const createCrawler = async (input?: ApifyStoreActorOptions) => {
+  const { query, categoriesByText } = input || {};
+
+  const proxyConfiguration = process.env.APIFY_IS_AT_HOME
+    ? await Actor.createProxyConfiguration()
+    : undefined;
 
   return new PlaywrightCrawler({
     proxyConfiguration,
     headless: false,
     requestHandler: async ({ page, log }) => {
-      const categLocators = await storePage.getCategories({ page });
-
-      const allItemsById: Record<string, ApifyActorStoreItem> = {};
+      const categLocators = await storePage.getCategories({ page, categoriesByText, logger: log });
 
       // 1) The request that fetches ALL items on the store page doesn't
       // include info on actor CATEGORIES.
@@ -45,8 +57,21 @@ const createCrawler = async () => {
       // 3) HENCE, to deal with 1), we visit all categories, fetch items from the categories,
       // and then assign the categories to the items based on which datasets
       // we found the items in.
-      //
-      // HENCE, we set up a network request interception, and when we come across
+      const allItemsById: Record<string, ApifyActorStoreItem> = {};
+
+      const processItem = (item: ApifyActorStoreItem, category: string) => {
+        // Add category to the already-seen item
+        if (allItemsById[item.objectID]) {
+          allItemsById[item.objectID].categories!.push(category);
+          return;
+        } else {
+          // Remember the item
+          allItemsById[item.objectID] = item;
+          item.categories = [category];
+        }
+      };
+
+      // And hence, we set up a network request interception, and when we come across
       // a request made for specific category, we fetch all it's items.
       const disposeIntercept = await storePage.setupCategoriesIntercept({
         page,
@@ -60,20 +85,11 @@ const createCrawler = async () => {
           const category = payload.filters?.split(':')[1];
           await storePage.fetchStoreItems({
             fetchOptions: { url, headers },
-            payload,
+            // Insert our custom query from actor input
+            payload: query ? { ...payload, query } : payload,
             logger: log,
-            onData: async (data) => {
-              data.hits?.forEach((d) => {
-                // Add category to the already-seen item
-                if (allItemsById[d.objectID]) {
-                  allItemsById[d.objectID].categories!.push(category!);
-                  return;
-                } else {
-                  // Remember the item
-                  allItemsById[d.objectID] = d;
-                  d.categories = [category!];
-                }
-              });
+            onData: (data) => {
+              data.hits?.forEach((d) => processItem(d, category!));
             },
           });
         },
@@ -144,9 +160,35 @@ const storePage = {
     return url.href.includes('algolia.net/1/indexes/prod_PUBLIC_STORE/query');
   },
 
-  getCategories: async ({ page }: { page: Page }) => {
-    const categLocs = await page.locator('[data-test="sidebar-categories"] a').all();
-    return categLocs;
+  getCategories: async ({
+    page,
+    categoriesByText,
+    logger,
+  }: {
+    page: Page;
+    categoriesByText?: string[];
+    logger: Log;
+  }) => {
+    const categMultiLoc = await page.locator('[data-test="sidebar-categories"] a');
+    const categLocs = await categMultiLoc.all();
+    if (!categoriesByText) return categLocs;
+
+    // Select categories by their text content
+    const normTxt = (t: string) => t.trim().toLocaleLowerCase();
+    const searchedForTexts = categoriesByText.map(normTxt);
+    const categLocTexts = (await categMultiLoc.allTextContents()).map(normTxt);
+    const filteredCategLocs = categLocs.filter((_loc, index) => {
+      return searchedForTexts.includes(categLocTexts[index]);
+    });
+
+    if (!filteredCategLocs.length) {
+      logger.info(`None of available categories matched texts ${JSON.stringify(categoriesByText)}`);
+    } else {
+      logger.info(
+        `${filteredCategLocs.length} categories matched texts ${JSON.stringify(categoriesByText)}`
+      );
+    }
+    return filteredCategLocs;
   },
 
   /**
@@ -226,11 +268,12 @@ const storePage = {
       Object.keys(STORE_PAGE_FETCH_ITEMS_DEFAULT_FETCH_OPTIONS.headers)
     );
 
+    const queryState = JSON.stringify({ CATEGORY: payload.filters, QUERY: payload.query });
+
     while (true) {
-      logger.info(`Fetching page ${payload.page + 1} for category filter ${payload.filters}`);
+      logger.info(`Fetching page ${payload.page + 1} for ${queryState}`);
 
       const response = await fetch(url, { ...fetchOptions, headers } as any);
-
       const data = (await response.json()) as CategoriesQueryResponsePayload;
       await onData(data);
 
