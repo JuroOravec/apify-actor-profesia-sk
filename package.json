@@ -29,7 +29,7 @@
     "start": "npm run start:dev",
     "start:prod": "node dist/cjs/index.js",
     "start:dev": "ts-node ./src/index.ts",
-    "build": "npm run build:esm",
+    "build": "npm run build:cjs",
     "build:all": "npm run build:cjs && npm run build:esm && npm run build:umd",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:esm": "tsc -p tsconfig.esm.json",
