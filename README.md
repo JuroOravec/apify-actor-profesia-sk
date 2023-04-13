@@ -12,7 +12,7 @@ With Apify Store Scraper, you can extract data on all Actors on the [Apify's Sto
 - Filter the results based on categories or search terms
 - Download the dataset in JSON, JSONL, XML, CSV, Excel, or HTML formats
 
-## How can you use scraped Apify Store data? (Use Cases)
+## How can you use scraped Apify Store data? (Use cases)
 - Analyze the Apify Actor ecosystem and identify popular actors
 - Monitor newly released actors and updates
 - Discover new actors for your web scraping needs
@@ -31,8 +31,8 @@ Available categories: AI, Automation, Business, Covid-19, Developer Examples, De
 This scraper is free, you pay only for usage!
 
 Cost of full run (~ 1100 actors):
-- One-off run - $0.032
-- Every day - $1 per month (31 * $0.032)
+- One-off run - $0.031
+- Every day - less than $1 per month ($0.961 = 31 * $0.031)
 
 Remember that with the [Apify Free plan](https://apify.com/pricing) you have $5 free usage per month.
 
