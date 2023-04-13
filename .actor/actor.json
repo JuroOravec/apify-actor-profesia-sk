@@ -3,10 +3,13 @@
     "name": "apify-store-scraper",
     "title": "Apify Store Scraper",
     "description": "Scrape Apify Store Actors",
-    "version": "0.2",
+    "version": "0.3",
+    "dockerfile": "./Dockerfile",
     "meta": {
         "templateId": "ts-crawlee-playwright-chrome"
     },
     "input": "./input_schema.json",
-    "dockerfile": "./Dockerfile"
+    "storages": {
+      "dataset": "./dataset_schema.json"
+    }
 }

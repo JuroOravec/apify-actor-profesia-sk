@@ -1,0 +1,54 @@
+{
+  "actorSpecification": 1,
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "pictureUrl",
+          "title",
+          "name",
+          "description",
+          "categories",
+          "notice",
+
+          "userPictureUrl",
+          "username",
+          "userFullName",
+          
+          "stats.totalBuilds",
+          "stats.totalRuns",
+          "stats.totalUsers",
+          "stats.totalUsers7Days",
+          "stats.totalUsers30Days",
+          "stats.totalUsers90Days",
+          "stats.lastRunStartedAt",
+
+          "currentPricingInfo.pricingModel",
+          "currentPricingInfo.pricePerUnitUsd",
+          "currentPricingInfo.apifyMarginPercentage",
+          "currentPricingInfo.createdAt",
+          "currentPricingInfo.startedAt",
+          "currentPricingInfo.trialMinutes"
+        ],
+        "flatten": [
+          "stats",
+          "currentPricingInfo"
+        ]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "pictureUrl": {
+            "label": "Picture",
+            "format": "image"
+          },
+          "userPictureUrl": {
+            "label": "User picture",
+            "format": "image"
+          }
+        }
+      }
+    }
+  }
+}
