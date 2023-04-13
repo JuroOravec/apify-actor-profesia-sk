@@ -1,6 +1,6 @@
 {
   "title": "Apify Store Scraper input",
-  "description": "Shubidi dubi",
+  "description": "Configure the Apify Store Scraper",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
@@ -26,8 +26,7 @@
           "description": "If given, only actors from this category will be retried",
           "example": "facebook",
           "editor": "select",
-          "enum": ["AI", "AUTOMATION", "BUSINESS", "COVID_19", "DEVELOPER_EXAMPLES", "DEVELOPER_TOOLS", "ECOMMERCE", "GAMES", "JOBS", "MARKETING", "NEWS", "SEO_TOOLS", "SOCIAL_MEDIA", "TRAVEL", "VIDEOS", "REAL_ESTATE", "SPORTS", "EDUCATION", "OTHER"],
-          "enumTitles": ["AI", "Automation", "Business", "Covid-19", "Developer Examples", "Developer Tools", "E-commerce", "Games", "Jobs", "Marketing", "News", "SEO Tools", "Social media", "Travel", "Videos", "Real estate", "Sports", "Education", "Other"],
+          "enum": ["AI", "Automation", "Business", "Covid-19", "Developer Examples", "Developer Tools", "E-commerce", "Games", "Jobs", "Marketing", "News", "SEO Tools", "Social media", "Travel", "Videos", "Real estate", "Sports", "Education", "Other"],
           "nullable": true
       }
   },
