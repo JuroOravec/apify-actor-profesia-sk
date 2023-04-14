@@ -1,16 +1,10 @@
-import { Actor, Log } from 'apify';
+import { Actor } from 'apify';
 import { PlaywrightCrawler } from 'crawlee';
-import type { Page, Route } from 'playwright';
-import fetch from 'node-fetch';
-import { pick } from 'lodash';
+import { keyBy } from 'lodash';
 
-import type {
-  ApifyActorStoreItem,
-  ApifyStoreActorInput,
-  CategoriesQueryRequestPayload,
-  CategoriesQueryResponsePayload,
-  MaybePromise,
-} from './types';
+import { poll } from './utils';
+import type { ApifyActorStoreItem, ApifyStoreActorInput } from './types';
+import { storePageActions } from './page-actions/store';
 
 export const run = async (): Promise<void> => {
   // See docs:
@@ -32,6 +26,40 @@ export const run = async (): Promise<void> => {
   );
 };
 
+/**
+ * Mapping of categories as show in the web and the filter option for network request
+ *
+ * We have to keep this here, so we can answer these questions:
+ * - When we receive a response for a network request with a certain category filter,
+ *   which category button in the UI does it correspond to?
+ * - Do we have to wait for a network response after clicking on a button?
+ *
+ * This is unfortunate as it means we have to keep it up-to-date manually.
+ */
+const CATEGORIES = [
+  { text: 'ai', filter: 'AI' },
+  { text: 'automation', filter: 'AUTOMATION' },
+  { text: 'business', filter: 'BUSINESS' },
+  { text: 'covid-19', filter: 'COVID_19' },
+  { text: 'developer examples', filter: 'DEVELOPER_EXAMPLES' },
+  { text: 'developer tools', filter: 'DEVELOPER_TOOLS' },
+  { text: 'e-commerce', filter: 'ECOMMERCE' },
+  { text: 'games', filter: 'GAMES' },
+  { text: 'jobs', filter: 'JOBS' },
+  { text: 'marketing', filter: 'MARKETING' },
+  { text: 'news', filter: 'NEWS' },
+  { text: 'seo tools', filter: 'SEO_TOOLS' },
+  { text: 'social media', filter: 'SOCIAL_MEDIA' },
+  { text: 'travel', filter: 'TRAVEL' },
+  { text: 'videos', filter: 'VIDEOS' },
+  { text: 'real estate', filter: 'REAL_ESTATE' },
+  { text: 'sports', filter: 'SPORTS' },
+  { text: 'education', filter: 'EDUCATION' },
+  { text: 'other', filter: 'OTHER' },
+];
+const CATEGORIES_BY_TEXT = keyBy(CATEGORIES, (c) => c.text);
+const CATEGORIES_BY_FILTER = keyBy(CATEGORIES, (c) => c.filter);
+
 interface ApifyStoreActorOptions {
   query?: string;
   categoriesByText?: string[];
@@ -48,7 +76,13 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
     proxyConfiguration,
     headless: false,
     requestHandler: async ({ page, log }) => {
-      const categLocators = await storePage.getCategories({ page, categoriesByText, logger: log });
+      log.info('Received inputs', { query, categoriesByText });
+
+      const categLocators = await storePageActions.getCategories({
+        page,
+        categoriesByText,
+        logger: log,
+      });
 
       // 1) The request that fetches ALL items on the store page doesn't
       // include info on actor CATEGORIES.
@@ -71,9 +105,19 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
         }
       };
 
+      // With given approach (intercepting requests) there can be a race condition between:
+      // 1) The time we start "waiting for response" from the intercepted network request
+      // 2) When the response actually arrives.
+      //
+      // In other words, if response comes back BEFORE we start waiting for response, we get stuck.
+      //
+      // HENCE, we use this state to know which network requests (for which categories)
+      // have already been intercepted.
+      const interceptedCategories = new Set<string>();
+
       // And hence, we set up a network request interception, and when we come across
       // a request made for specific category, we fetch all it's items.
-      const disposeIntercept = await storePage.setupCategoriesIntercept({
+      const disposeIntercept = await storePageActions.setupCategoriesIntercept({
         page,
         logger: log,
 
@@ -83,7 +127,15 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
         // THEN, fetch all items of that category.
         onDetectedCategory: async ({ url, payload, headers }) => {
           const category = payload.filters?.split(':')[1];
-          await storePage.fetchStoreItems({
+
+          // Remember that we've visited this category
+          const categData = CATEGORIES_BY_FILTER[category!];
+          if (!categData) {
+            log.warning(`Unrecognized filter category "${category}" - Please contact the developer of this actor so they add this category to the scraped items.`); // prettier-ignore
+          }
+          interceptedCategories.add(category!);
+
+          await storePageActions.fetchStoreItems({
             fetchOptions: { url, headers },
             // Insert our custom query from actor input
             payload: query ? { ...payload, query } : payload,
@@ -112,15 +164,27 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
           log.info('Cookie consent window not found');
         }
 
+        const categText = (await categLocator.textContent())?.trim();
+
         // Click on a category button and wait till it loads
-        log.info(`Clicking on category "${await categLocator.textContent()}"`);
+        log.info(`Clicking on category "${categText}"`);
         await categLocator.click();
 
-        if (!process.env.APIFY_IS_AT_HOME) {
-          // Wait for the network request we want to intercept
-          log.info(`Waiting for response for category "${await categLocator.textContent()}"`);
-          await page.waitForResponse((res) => storePage.urlIsItemsQuery(res.url()));
-        }
+        // Wait for the network request we want to intercept
+        log.info(`Waiting for response for category "${categText}"`);
+        await Promise.race([
+          // Either wait for network response
+          page.waitForResponse((res) => storePageActions.urlIsItemsQuery(res.url())),
+          // Or, if the network response has already arrived while we were setting this up,
+          // then also regularly check if we've already visited this category
+          poll(() => {
+            const { filter } = CATEGORIES_BY_TEXT[categText!.toLocaleLowerCase()] || {};
+            if (filter) return interceptedCategories.has(filter);
+
+            log.warning(`Unrecognized filter category "${categText}" - Please contact the developer of this actor so they add this category to the scraped items.`); // prettier-ignore
+          }, 50),
+        ]);
+        log.info(`DONE Waiting for response for category "${categText}"`);
 
         await new Promise((res) => setTimeout(res, 500));
       }
@@ -131,172 +195,4 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
       await disposeIntercept();
     },
   });
-};
-
-/** Example of how the payload looks, but we try to use data from actual Request */
-const STORE_PAGE_FETCH_ITEMS_DEFAULT_PAYLOAD: CategoriesQueryRequestPayload = {
-  query: '',
-  page: 0,
-  hitsPerPage: 24,
-  restrictSearchableAttributes: [],
-  attributesToHighlight: [],
-  attributesToRetrieve: ['title', 'name', 'username', 'userFullName', 'stats', 'description', 'pictureUrl', 'userPictureUrl', 'notice', 'currentPricingInfo'], // prettier-ignore
-};
-
-/**
- * Example of how the request looks. But we try to take the actual values
- * from an intercepted Request, so we've got the right endpoint and API key.
- */
-const STORE_PAGE_FETCH_ITEMS_DEFAULT_FETCH_OPTIONS = {
-  url: 'https://ow0o5i3qo7-dsn.algolia.net/1/indexes/prod_PUBLIC_STORE/query',
-  headers: {
-    accept: '*/*',
-    'content-type': 'application/x-www-form-urlencoded',
-    'x-algolia-api-key': '0ecccd09f50396a4dbbe5dbfb17f4525',
-    'x-algolia-application-id': 'OW0O5I3QO7',
-  } as any,
-  referrer: 'https://console.apify.com/',
-  referrerPolicy: 'origin',
-  method: 'POST',
-} satisfies Partial<Request>;
-
-/** Actions defined for the store page */
-const storePage = {
-  urlIsItemsQuery: (inputUrl: URL | string) => {
-    const url = typeof inputUrl === 'string' ? inputUrl : inputUrl.href;
-    // https://ow0o5i3qo7-dsn.algolia.net/1/indexes/prod_PUBLIC_STORE/query
-    return url.includes('algolia.net/1/indexes/prod_PUBLIC_STORE/query');
-  },
-
-  getCategories: async ({
-    page,
-    categoriesByText,
-    logger,
-  }: {
-    page: Page;
-    categoriesByText?: string[];
-    logger: Log;
-  }) => {
-    const categMultiLoc = await page.locator('[data-test="sidebar-categories"] a');
-    const categLocs = await categMultiLoc.all();
-    if (!categoriesByText) return categLocs;
-
-    // Select categories by their text content
-    const normTxt = (t: string) => t.trim().toLocaleLowerCase();
-    const searchedForTexts = categoriesByText.map(normTxt);
-    const categLocTexts = (await categMultiLoc.allTextContents()).map(normTxt);
-    const filteredCategLocs = categLocs.filter((_loc, index) => {
-      return searchedForTexts.includes(categLocTexts[index]);
-    });
-
-    if (!filteredCategLocs.length) {
-      logger.info(`None of available categories matched texts ${JSON.stringify(categoriesByText)}`);
-    } else {
-      logger.info(
-        `${filteredCategLocs.length} categories matched texts ${JSON.stringify(categoriesByText)}`
-      );
-    }
-    return filteredCategLocs;
-  },
-
-  /**
-   * Set up network interception using playwright's Page.route(), so that we can extract the
-   * data from the network payloads instead of from the HTML.
-   */
-  setupCategoriesIntercept: async ({
-    page,
-    logger,
-    onDetectedCategory,
-  }: {
-    page: Page;
-    onDetectedCategory: (ctx: {
-      url: string;
-      headers: Record<string, string>;
-      payload: CategoriesQueryRequestPayload;
-    }) => MaybePromise<void>;
-    logger: Log;
-  }) => {
-    const categories = new Set();
-
-    // See these for intercepting requests in Playwright
-    // https://timdeschryver.dev/blog/intercepting-http-requests-with-playwright#using-the-original-response-to-build-a-mocked-response
-    // https://playwright.dev/docs/api/class-page#page-route
-    // https://playwright.dev/docs/api/class-route#route-fulfill
-    const routeHandler = async (route: Route) => {
-      const request = route.request();
-      const url = request.url();
-      const headers = request.headers();
-      const postData = request.postData() || '{}';
-      const payload = JSON.parse(postData) as CategoriesQueryRequestPayload;
-      const { filters } = payload;
-
-      await route.continue();
-
-      if (filters && !categories.has(filters)) {
-        logger.info(`Found store category filter "${filters}"`);
-        categories.add(filters);
-        await onDetectedCategory({ url, payload, headers });
-        logger.info(`DONE onDetectedCategory for category filter ${payload.filters}`);
-      }
-    };
-
-    await page.route(storePage.urlIsItemsQuery, routeHandler);
-
-    const dispose = () => {
-      return page.unroute(storePage.urlIsItemsQuery, routeHandler);
-    };
-    return dispose;
-  },
-
-  fetchStoreItems: async ({
-    fetchOptions: inputFetchOptions,
-    payload: inputPayload,
-    logger,
-    onData,
-  }: {
-    fetchOptions?: Omit<Partial<Request>, 'headers'> & { headers: Record<string, string> };
-    payload?: Partial<CategoriesQueryRequestPayload>;
-    onData: (data: CategoriesQueryResponsePayload) => MaybePromise<void>;
-    logger: Log;
-  }) => {
-    const payload: CategoriesQueryRequestPayload = {
-      ...STORE_PAGE_FETCH_ITEMS_DEFAULT_PAYLOAD,
-      ...inputPayload,
-      hitsPerPage: 500, // Note: Default is 24, but more hits = more faster.
-    };
-
-    const fetchOptions = {
-      ...STORE_PAGE_FETCH_ITEMS_DEFAULT_FETCH_OPTIONS,
-      ...inputFetchOptions,
-      body: JSON.stringify(payload, null, 2) as any,
-    };
-    const url = fetchOptions.url;
-    const headers = pick(
-      fetchOptions.headers,
-      Object.keys(STORE_PAGE_FETCH_ITEMS_DEFAULT_FETCH_OPTIONS.headers)
-    );
-
-    const queryState = JSON.stringify({ CATEGORY: payload.filters, QUERY: payload.query });
-
-    while (true) {
-      logger.info(`Fetching page ${payload.page + 1} for ${queryState}`);
-
-      const response = await fetch(url, { ...fetchOptions, headers } as any);
-      const data = (await response.json()) as CategoriesQueryResponsePayload;
-      await onData(data);
-
-      // Check if we've reached end of pagination
-      const newItems = data.hits || [];
-      if (!newItems.length || (data.nbHits && data.nbHits <= newItems.length)) {
-        logger.info(
-          `DONE fetching page ${payload.page + 1} for category filter ${payload.filters}`
-        );
-        break;
-      }
-
-      // Or continue to next page
-      payload.page += 1;
-      await new Promise((res) => setTimeout(res, 300));
-    }
-  },
 };
