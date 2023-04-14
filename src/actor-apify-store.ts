@@ -74,7 +74,7 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
 
   return new PlaywrightCrawler({
     proxyConfiguration,
-    headless: false,
+    headless: true,
     requestHandler: async ({ page, log }) => {
       log.info('Received inputs', { query, categoriesByText });
 
