@@ -1,4 +1,4 @@
-import { Actor } from 'apify';
+import { Actor, Log } from 'apify';
 import { PlaywrightCrawler } from 'crawlee';
 import { keyBy } from 'lodash';
 
@@ -113,7 +113,7 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
       //
       // HENCE, we use this state to know which network requests (for which categories)
       // have already been intercepted.
-      const interceptedCategories = new Set<string>();
+      const { waitForCategoryIntercepted, setCategoryAsIntercepted } = setupCategoryIntercept({ log }); // prettier-ignore
 
       // And hence, we set up a network request interception, and when we come across
       // a request made for specific category, we fetch all it's items.
@@ -129,11 +129,7 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
           const category = payload.filters?.split(':')[1];
 
           // Remember that we've visited this category
-          const categData = CATEGORIES_BY_FILTER[category!];
-          if (!categData) {
-            log.warning(`Unrecognized filter category "${category}" - Please contact the developer of this actor so they add this category to the scraped items.`); // prettier-ignore
-          }
-          interceptedCategories.add(category!);
+          setCategoryAsIntercepted(category!);
 
           await storePageActions.fetchStoreItems({
             fetchOptions: { url, headers },
@@ -177,12 +173,7 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
           page.waitForResponse((res) => storePageActions.urlIsItemsQuery(res.url())),
           // Or, if the network response has already arrived while we were setting this up,
           // then also regularly check if we've already visited this category
-          poll(() => {
-            const { filter } = CATEGORIES_BY_TEXT[categText!.toLocaleLowerCase()] || {};
-            if (filter) return interceptedCategories.has(filter);
-
-            log.warning(`Unrecognized filter category "${categText}" - Please contact the developer of this actor so they add this category to the scraped items.`); // prettier-ignore
-          }, 50),
+          waitForCategoryIntercepted({ text: categText! }),
         ]);
         log.info(`DONE Waiting for response for category "${categText}"`);
 
@@ -195,4 +186,31 @@ const createCrawler = async (input?: ApifyStoreActorOptions) => {
       await disposeIntercept();
     },
   });
+};
+
+/**
+ * We use this state to know which network requests (for which categories)
+ * have already been intercepted.
+ */
+const setupCategoryIntercept = ({ log }: { log: Log }) => {
+  const interceptedCategories = new Set<string>();
+
+  const waitForCategoryIntercepted = ({ text }: { text: string }) =>
+    poll(() => {
+      const { filter } = CATEGORIES_BY_TEXT[text!.toLocaleLowerCase()] || {};
+      if (filter) return interceptedCategories.has(filter);
+
+      log.warning(`Unrecognized filter category "${text}" - Please contact the developer of this actor so they add this category to the scraped items.`); // prettier-ignore
+    }, 50);
+
+  const setCategoryAsIntercepted = (categoryFilter: string) => {
+    // Remember that we've visited this category
+    const categData = CATEGORIES_BY_FILTER[categoryFilter];
+    if (!categData) {
+      log.warning(`Unrecognized filter category "${categoryFilter}" - Please contact the developer of this actor so they add this category to the scraped items.`); // prettier-ignore
+    }
+    interceptedCategories.add(categoryFilter!);
+  };
+
+  return { waitForCategoryIntercepted, setCategoryAsIntercepted };
 };
