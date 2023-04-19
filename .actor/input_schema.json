@@ -1,34 +1,156 @@
 {
-  "title": "Apify Store Scraper input",
-  "description": "Configure the Apify Store Scraper",
+  "title": "Profesia.sk Scraper",
+  "description": "Configure the Profesia.sk Scraper",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
-      "startUrls": {
-          "title": "Start URLs",
-          "type": "array",
-          "description": "URLs to start with",
-          "prefill": [
-              { "url": "https://apify.com/store" }
-          ],
-          "editor": "requestListSources"
-      },
-      "query": {
-          "type": "string",
-          "title": "Search query",
-          "description": "If given, only actors matching the query will be retrieved",
-          "example": "facebook",
-          "editor": "textfield"
-      },
-      "category": {
-          "type": "string",
-          "title": "Actory category",
-          "description": "If given, only actors from this category will be retried",
-          "example": "facebook",
-          "editor": "select",
-          "enum": ["AI", "Automation", "Business", "Covid-19", "Developer Examples", "Developer Tools", "E-commerce", "Games", "Jobs", "Marketing", "News", "SEO Tools", "Social media", "Travel", "Videos", "Real estate", "Sports", "Education", "Other"],
-          "nullable": true
-      }
-  },
-  "required": ["startUrls"]
+    "datasetType": {
+      "type": "string",
+      "title": "Dataset type",
+      "description": "Use this option if you want to scrape whole dataset, not just specific URLs. Choose what kind of data you want to extract - job offers, list of companies, list of industries, ... This option is ignored if 'startUrls' is given",
+      "editor": "select",
+      "example": "jobOffers",
+      "default": "jobOffers",
+      "prefill": "jobOffers",
+      "enum": [
+        "jobOffers",
+        "industies",
+        "positions",
+        "companies",
+        "locations",
+        "languages",
+        "partners"
+      ],
+      "enumTitles": [
+        "Job offers",
+        "Industries",
+        "Positions",
+        "Companies",
+        "Locations",
+        "Languages",
+        "partners"
+      ],
+      "nullable": false
+    },
+    "startUrls": {
+      "title": "Start URLs",
+      "type": "array",
+      "description": "Select specific URLs to scrape. This option takes precedence over the 'dataset type' input. If the URL is a listing page or a company page, all entries of that list are extracted. If the URL is a company page, only that page is extracted",
+      "prefill": [
+        {
+          "url": "https://www.profesia.sk/praca"
+        }
+      ],
+      "editor": "requestListSources"
+    },
+    "jobOfferDetailed": {
+      "title": "Detailed",
+      "type": "boolean",
+      "description": "If checked, the scraper will obtain more detailed info for job offers by visit the details page of each job offer to extract data. If un-checked, only the data from the listing page is extracted. For details, please refer to http://apify.com/store/jurooravec/profesia-sk-scraper#output",
+      "example": true,
+      "default": true,
+      "sectionCaption": "Job Offer Filters",
+      "groupDescription": "These filters are applied ONLY when 'Dataset type' is set to 'Job offers' (Optional)",
+      "nullable": true
+    },
+    "jobOfferFilterQuery": {
+      "type": "string",
+      "title": "Search query (full-text search)",
+      "description": "If given, only entries matching the query will be retrieved (full-text search)",
+      "example": "specialist",
+      "editor": "textfield",
+      "nullable": true
+    },
+    "jobOfferFilterMaxCount": {
+      "title": "Max number of results",
+      "type": "integer",
+      "description": "If set, only up to this number of entries will be extracted PER SINGLE LIST",
+      "example": 10,
+      "minimum": 1,
+      "nullable": true
+    },
+    "jobOfferFilterMinSalaryValue": {
+      "title": "Min salary",
+      "type": "integer",
+      "description": "If set, only entries offering this much or more will be extracted",
+      "example": 10,
+      "minimum": 1,
+      "nullable": true
+    },
+    "jobOfferFilterMinSalaryPeriod": {
+      "title": "Min salary per hour/month",
+      "type": "string",
+      "description": "Choose if the minimum salary is in per hour or per month format",
+      "editor": "select",
+      "example": "month",
+      "default": "month",
+      "prefill": "month",
+      "enum": [
+        "month",
+        "hour"
+      ],
+      "enumTitles": [
+        "Per month",
+        "Per hour"
+      ],
+      "nullable": true
+    },
+    "jobOfferFilterEmploymentType": {
+      "title": "Type of employment",
+      "type": "string",
+      "description": "If set, only entries with this employment filter will be extracted",
+      "editor": "select",
+      "example": "fte",
+      "enum": [
+        "fte",
+        "pte",
+        "selfemploy",
+        "voluntary",
+        "internship"
+      ],
+      "enumTitles": [
+        "Full-time employment",
+        "Part-time employment",
+        "Freelance (Self-employed)",
+        "Voluntary work",
+        "Internship"
+      ],
+      "nullable": true
+    },
+    "jobOfferFilterRemoteWorkType": {
+      "title": "Remote vs On-site",
+      "type": "string",
+      "description": "If set, only entries with this type of remote work filter will be extracted",
+      "editor": "select",
+      "example": "fullRemote",
+      "enum": [
+        "fullRemote",
+        "partialRemote",
+        "noRemote"
+      ],
+      "enumTitles": [
+        "Full remote (Work from home)",
+        "Partial remote",
+        "On-site only"
+      ],
+      "nullable": true
+    },
+    "jobOfferFilterLastNDays": {
+      "title": "Last N days",
+      "type": "integer",
+      "description": "If set, only entries this much days old will be extracted. E.g. 7 = 1 week old, 31 = 1 month old, ...",
+      "example": 10,
+      "minimum": 0,
+      "nullable": true
+    },
+    "jobOfferCountOnly": {
+      "title": "Check count of matched job offers",
+      "type": "boolean",
+      "description": "If checked, no data is extracted. Instead, the count of matched job offers is printed in the log.",
+      "default": false,
+      "groupCaption": "Troubleshooting options",
+      "groupDescription": "Use these to verify that your custom startUrls are correct",
+      "nullable": true
+    }
+  }
 }
