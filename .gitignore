@@ -1,7 +1,7 @@
-dist
-lib
-esm
-umd
+dist/*
+lib/*
+esm/*
+umd/*
 
 # apify
 storage/
