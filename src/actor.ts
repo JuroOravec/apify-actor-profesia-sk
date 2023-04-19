@@ -102,7 +102,7 @@ const createCrawler = async (
 
   return new PlaywrightCrawler({
     proxyConfiguration,
-    headless: false,
+    headless: true,
     // See https://docs.apify.com/academy/expert-scraping-with-apify/solutions/rotating-proxies
     // useSessionPool: true,
     // sessionPoolOptions: {},

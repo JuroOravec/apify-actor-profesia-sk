@@ -106,8 +106,7 @@ describe(
     });
 
     it('Enqueues job offer details URLs if jobOfferDetailed=true', () => {
-      const expectedReqsCount = [1, 3];
-      expect.assertions(9);
+      expect.assertions(4);
       return runActorTest({
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
@@ -120,10 +119,8 @@ describe(
           expect(data[0].offerUrl).not.toBe('https://www.profesia.sk/praca');
         },
         onBatchAddRequests: (requests) => {
-          const currExpectedReqs = expectedReqsCount.shift();
-          expect(requests).toHaveLength(currExpectedReqs!);
-
-          if (currExpectedReqs! > 1) expect(requests[0].url).not.toBe('https://www.profesia.sk/praca'); // prettier-ignore
+          expect(requests).toHaveLength(1);
+          expect(requests[0].url).toBe('https://www.profesia.sk/praca');
         },
         onDone: (done) => {
           done();

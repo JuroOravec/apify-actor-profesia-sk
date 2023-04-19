@@ -29,7 +29,7 @@ export interface ProfesiaSkActorInput {
   jobOfferCountOnly?: boolean;
 }
 
-export interface SimpleProfesiaSKJobOfferItem {
+export interface SimpleProfesiaSKJobOfferItem extends ProfesiaSkJobOfferSalaryFields {
   listingUrl: string | null;
   /** Eg `"moJRLRc85AitArpNN"` */ // TODO
   employerName: string | null;
@@ -39,12 +39,6 @@ export interface SimpleProfesiaSKJobOfferItem {
   offerName: string | null;
   offerUrl: string | null;
   offerId: string | null;
-
-  salaryRange: string | null;
-  salaryRangeLower: number | null;
-  salaryRangeUpper: number | null;
-  salaryCurrency: string | null;
-  salaryPeriod: string | null;
 
   location: string | null;
   labels: string[];
@@ -85,4 +79,12 @@ export interface ProfesiaSkJobOfferDescriptionFields {
   employerDescription: string | null;
   employeeCount: string | null;
   employerContact: string | null;
+}
+
+export interface ProfesiaSkJobOfferSalaryFields {
+  salaryRange: string | null;
+  salaryRangeLower: number | null;
+  salaryRangeUpper: number | null;
+  salaryCurrency: string | null;
+  salaryPeriod: string | null;
 }

@@ -1,4 +1,5 @@
 import { PlaywrightCrawlingContext, createPlaywrightRouter } from 'crawlee';
+import * as cheerio from 'cheerio';
 
 import {
   RouteHandler,
@@ -9,15 +10,12 @@ import {
 import { playwrightHandlerWithApifyErrorCapture } from './lib/errorHandler';
 import { GenericListEntry, nonJobListsPageActions } from './pageActions/jobRelatedLists';
 import { PartnerEntry, partnersPageActions } from './pageActions/partners';
-import type {
-  SimpleProfesiaSKJobOfferItem,
-  DetailedProfesiaSKJobOfferItem,
-  ProfesiaSkActorInput,
-} from './types';
+import type { SimpleProfesiaSKJobOfferItem, ProfesiaSkActorInput } from './types';
 import { pushDataWithMetadata } from './utils/actor';
 import { datasetTypeToUrl, routeLabels } from './constants';
 import { jobListingPageActions } from './pageActions/jobListing';
 import { jobDetailPageActions } from './pageActions/jobDetail';
+import { serialAsyncMap, wait } from './utils/async';
 
 // Originally based on https://docs.apify.com/academy/expert-scraping-with-apify/solutions/using-storage-creating-tasks
 
@@ -131,22 +129,32 @@ const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
       const { jobOfferDetailed } = input;
 
       const onData = async (entries: SimpleProfesiaSKJobOfferItem[]) => {
-        // If "detailed" option, push the links (+ its data) to Url queue for JOB_DETAIL
-        // so we send the data to the dataset only once we've also processed the details pages.
-        if (jobOfferDetailed) {
-          log.info(`Scheduling crawler to visit details page of ${entries.length} entries`);
-          await crawler.addRequests(
-            entries.map((offer) => ({
-              url: offer.offerUrl!,
-              userData: { offer },
-              label: routeLabels.JOB_DETAIL,
-            }))
-          );
-          log.info(`Done scheduling crawler to visit details page of ${entries.length} entries`); // prettier-ignore
-        } else {
-          // If not detailed, just save the data
+        // If not detailed, just save the data
+        if (!jobOfferDetailed) {
           await pushDataWithMetadata(entries, ctx);
+          return;
         }
+
+        // If "detailed" option, also fetch and process the job detail page for each entry
+        log.info(`Fetching details page of ${entries.length} entries`);
+
+        const detailedEntries = await serialAsyncMap(entries, async (entry) => {
+          if (!entry.offerUrl) {
+            log.info(`Skipping fetching details page - URL is missing (ID: ${entry.offerId})`);
+            return;
+          }
+
+          log.info(`Fetching details page (ID: ${entry.offerId}) URL: ${entry.offerUrl}`);
+          const entryHtml = (await ctx.sendRequest({ url: entry.offerUrl, method: 'GET' })).body;
+          log.info(`Done fetching details page (ID: ${entry.offerId}) URL: ${entry.offerUrl}`);
+
+          const cheerioDom = cheerio.load(entryHtml);
+          const jobDetail = jobDetailPageActions.extractJobDetail({ cheerioDom, log, url: entry.offerUrl, jobData: entry }); // prettier-ignore
+
+          await wait(100);
+          return jobDetail;
+        });
+        await pushDataWithMetadata(detailedEntries, ctx);
       };
 
       await jobListingPageActions.extractJobOffers({ page, log, crawler, input, onData });
@@ -157,13 +165,11 @@ const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
     // - https://www.profesia.sk/praca/gohealth/O3964543
     // - https://www.profesia.sk/praca/ing-lukas-hromjak/O4068250
     JOB_DETAIL: playwrightHandlerWithApifyErrorCapture(async (ctx) => {
-      const { page, log, request } = ctx;
+      const { log, request } = ctx;
 
-      const onData = async (data: DetailedProfesiaSKJobOfferItem[]) => {
-        await pushDataWithMetadata(data, ctx);
-      };
-
-      await jobDetailPageActions.extractJobDetail({ page, log, jobData: request.userData?.offer, onData }); // prettier-ignore
+      const cheerioDom = await ctx.parseWithCheerio();
+      const entry = jobDetailPageActions.extractJobDetail({ cheerioDom, log, url: request.loadedUrl, jobData: request.userData?.offer }); // prettier-ignore
+      await pushDataWithMetadata(entry, ctx);
     }),
 
     JOB_RELATED_LIST: playwrightHandlerWithApifyErrorCapture(async (ctx) => {
