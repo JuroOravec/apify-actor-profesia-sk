@@ -1,9 +1,6 @@
-import type { Page } from 'playwright';
 import type { Log } from 'apify';
-
-import { serialAsyncMap } from '../utils/async';
-import type { MaybePromise } from '../utils/types.js';
-import { generalPageActions } from './general';
+import { AnyNode, Cheerio, CheerioAPI } from 'cheerio';
+import { resolveUrlPath } from '../utils/url';
 
 export interface PartnerEntry {
   name: string | null;
@@ -19,49 +16,60 @@ export interface PartnerEntry {
  */
 export const partnersPageActions = {
   /** Extract partners links from https://www.profesia.sk/partneri */
-  extractEntries: async ({
-    page,
+  extractPartnerEntries: ({
+    url,
+    cheerioDom,
     log,
-    onData,
   }: {
-    page: Page;
+    url: string;
+    cheerioDom: CheerioAPI;
     log: Log;
-    onData: (data: PartnerEntry[], tabIndex: number) => MaybePromise<void>;
   }) => {
     log.info('Starting extracting partners entries');
 
     log.info('Collecting partners categories');
-    const tabNames = (await page.locator('.nav-tabs a').allTextContents()).map((t) => t.trim());
-    const tabLocs = await page.locator('.tab-content .card').all();
+    const tabNames = cheerioDom('.nav-tabs a').toArray().map((el) => cheerioDom(el).text()?.trim()).filter(Boolean); // prettier-ignore
+    const tabCards = cheerioDom('.tab-content .card').toArray().map((el) => cheerioDom(el)); // prettier-ignore
     log.info(`Found ${tabNames.length} partners categories ${JSON.stringify(tabNames)}`);
 
-    await serialAsyncMap(tabLocs, async (tabLoc, tabIndex) => {
-      log.info(`Extracting entries for category ${tabNames[tabIndex]}`);
+    const entries = tabCards
+      .map((tabCardEl, tabIndex) => {
+        const category = tabNames[tabIndex];
+        log.info(`Extracting entries for category ${category}`);
 
-      await generalPageActions.clickAwayCookieConsent({ page, log });
+        const categEntries = tabCardEl.find('.row').toArray().map((el) => cheerioDom(el))
+        .map((entryEl) => partnersPageActions.extractSinglePartnerEntry({ url, entryEl, category })); // prettier-ignore
 
-      const entries = await tabLoc.locator('.row').evaluateAll((entryEls, category) => {
-        return entryEls.map((entryEl): PartnerEntry => {
-          const logoUrl = entryEl.querySelector('img')?.src ?? null;
+        log.info(`Found ${categEntries.length} entries for category ${category}`);
 
-          const infoEl = entryEl.querySelector('div:nth-child(2)');
-          const urlEl = infoEl?.querySelector('a');
-          const url = urlEl?.href ?? null;
-          const name = urlEl?.textContent?.trim() ?? null;
-          urlEl?.remove(); // Remove el so description textContent is easy to take
+        return categEntries;
+      })
+      .flat(1);
 
-          let description = infoEl?.textContent?.trim() ?? null;
-          description = description ? description : null;
+    log.info(`Done extracting partners entries (total ${entries.length})`);
+    return entries;
+  },
 
-          return { name, url, description, logoUrl, category };
-        });
-      }, tabNames[tabIndex]);
+  extractSinglePartnerEntry: ({
+    url: domainUrl,
+    entryEl,
+    category,
+  }: {
+    url: string;
+    entryEl: Cheerio<AnyNode>;
+    category: string;
+  }): PartnerEntry => {
+    let logoUrl = entryEl.find('img')?.first().prop('src')?.trim() ?? null;
+    if (logoUrl && logoUrl.startsWith('/')) logoUrl = resolveUrlPath(domainUrl, logoUrl);
 
-      log.info(`Calling callback with ${entries.length} extracted entries`);
-      await onData(entries, tabIndex);
-      log.info(`DONE Calling callback with ${entries.length} extracted entries`);
-    });
+    const infoEl = entryEl.find('div:nth-child(2)').first();
+    const urlEl = infoEl?.find('a').first();
+    const url = urlEl?.prop('href') ?? null;
+    const name = urlEl?.text()?.trim() ?? null;
+    urlEl?.remove(); // Remove el so description textContent is easy to take
 
-    log.info('Done extracting partners entries');
+    const description: string | null = infoEl?.text()?.trim() || null;
+
+    return { name, url, description, logoUrl, category };
   },
 };

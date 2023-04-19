@@ -173,13 +173,13 @@ const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
     }),
 
     JOB_RELATED_LIST: playwrightHandlerWithApifyErrorCapture(async (ctx) => {
-      const { page, log } = ctx;
+      const { page, request, log } = ctx;
 
       const onData = async (data: GenericListEntry[]) => {
         await pushDataWithMetadata(data, ctx);
       };
 
-      const isLocationsPage = page.url().match(/[\W]profesia\.sk\/praca\/zoznam-lokalit/i);
+      const isLocationsPage = (request.loadedUrl || request.url).match(/[\W]profesia\.sk\/praca\/zoznam-lokalit/i); // prettier-ignore
       const extractFn = isLocationsPage
         ? nonJobListsPageActions.extractLocationsLinks
         : nonJobListsPageActions.extractGenericLinks;
@@ -187,13 +187,13 @@ const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
     }),
 
     PARTNERS: playwrightHandlerWithApifyErrorCapture(async (ctx) => {
-      const { page } = ctx;
-
-      const onData = async (data: PartnerEntry[]) => {
-        await pushDataWithMetadata(data, ctx);
-      };
-
-      await partnersPageActions.extractEntries({ page, onData, log: ctx.log });
+      const cheerioDom = await ctx.parseWithCheerio();
+      const entries = partnersPageActions.extractPartnerEntries({
+        url: ctx.request.url,
+        cheerioDom,
+        log: ctx.log,
+      });
+      await pushDataWithMetadata(entries, ctx);
     }),
   };
 

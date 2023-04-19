@@ -15,16 +15,13 @@ describe(
     });
 
     it('extracts partners data', async () => {
-      let calls = 0;
       return runActorTest({
         input: { startUrls: ['https://profesia.sk/partneri'] },
         onPushData: (data, done) => {
           expect(data.length).toBeGreaterThan(0);
-          calls += 1;
 
           data.forEach((d) => Joi.assert(d, partnerEntryValidation));
-
-          if (calls === 2) done();
+          done();
         },
       });
     });
