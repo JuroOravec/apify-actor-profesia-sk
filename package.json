@@ -2,21 +2,21 @@
   "name": "apify-actor-profesia-sk",
   "version": "0.1.0",
   "private": true,
-  "description": "Apify Actor that scrapes Apify Store Actors",
+  "description": "Apify Actor that scrapes Profesia.sk",
   "author": "Juro Oravec <juraj.oravec.josefson@gmail.com>",
-  "homepage": "https://github.com/jurooravec/apify-actor-apify-store#readme",
+  "homepage": "https://github.com/jurooravec/apify-actor-profesia-sk#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jurooravec/apify-actor-apify-store.git"
+    "url": "git+https://github.com/jurooravec/apify-actor-profesia-sk.git"
   },
   "bugs": {
-    "url": "https://github.com/jurooravec/apify-actor-apify-store/issues"
+    "url": "https://github.com/jurooravec/apify-actor-profesia-sk/issues"
   },
   "license": "MIT",
   "keywords": [
     "apify",
     "actor",
-    "store",
+    "profesia",
     "scraper"
   ],
   "files": [
