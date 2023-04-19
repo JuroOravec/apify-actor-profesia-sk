@@ -1,4 +1,4 @@
-import { run } from './actor-apify-store';
+import { run } from './actor';
 
 const main = async () => {
   await run();
