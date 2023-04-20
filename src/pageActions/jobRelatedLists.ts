@@ -1,27 +1,34 @@
-import type { Page } from 'playwright';
 import type { Log } from 'apify';
+import { load as loadCheerio } from 'cheerio';
+import type { OptionsInit } from 'got-scraping';
 
 import { serialAsyncMap } from '../utils/async';
-import { resolveUrlPath } from '../utils/url';
 import type { MaybePromise } from '../utils/types.js';
-import { generalPageActions } from './general';
+import { DOMLib, cheerioDOMLib } from '../utils/dom';
 
 export interface GenericListEntry {
-  url: string;
-  name: string;
+  url: string | null;
+  name: string | null;
   count: number;
 }
 
 export interface LocationListEntry extends GenericListEntry {
   region: string | null;
-  country: string;
+  country: string | null;
 }
 
 interface RawExtractedLink {
-  url: string;
-  name: string;
+  url: string | null;
+  name: string | null;
   count: number;
-  lastHeadingTitle: string;
+  lastHeadingTitle: string | null;
+}
+
+interface ExtractEntriesOptions<TData, TEl> {
+  domLib: DOMLib<TEl>;
+  log: Log;
+  onFetchHTML: (overrideOptions?: Partial<OptionsInit>) => Promise<string>;
+  onData: (data: TData[], tabIndex: number) => MaybePromise<void>;
 }
 
 /**
@@ -32,7 +39,7 @@ interface RawExtractedLink {
  * - https://www.profesia.sk/praca/zoznam-spolocnosti/
  * - https://www.profesia.sk/praca/zoznam-lokalit/
  */
-export const nonJobListsPageActions = {
+export const jobRelatedListsPageActions = {
   /**
    * Extract following kind of links from:
    * - companies - https://www.profesia.sk/praca/zoznam-spolocnosti/
@@ -40,45 +47,27 @@ export const nonJobListsPageActions = {
    * - positions - https://www.profesia.sk/praca/zoznam-pozicii/
    * - language requirements - https://www.profesia.sk/praca/zoznam-jazykovych-znalosti/
    */
-  extractGenericLinks: async ({
-    page,
-    log,
-    onData,
-  }: {
-    page: Page;
-    log: Log;
-    onData: (data: GenericListEntry[], tabIndex: number) => MaybePromise<void>;
-  }) => {
-    log.info('Starting extracting entries');
-    await nonJobListsPageActions.extractEntries({
-      page,
-      log,
+  extractGenericLinks: async <T>(options: ExtractEntriesOptions<GenericListEntry, T>) => {
+    options.log.info('Starting extracting entries');
+    await jobRelatedListsPageActions.extractEntries({
+      ...options,
       onData: async (entries, tabIndex) => {
         const processedEntries: GenericListEntry[] = entries.map(({ url, name, count }) => ({
           url,
           name,
           count,
         }));
-        await onData(processedEntries, tabIndex);
+        await options.onData(processedEntries, tabIndex);
       },
     });
-    log.info('Done extracting entries');
+    options.log.info('Done extracting entries');
   },
 
   /** Extract location links from https://www.profesia.sk/praca/zoznam-lokalit/ */
-  extractLocationsLinks: async ({
-    page,
-    onData,
-    log,
-  }: {
-    page: Page;
-    log: Log;
-    onData: (data: LocationListEntry[], tabIndex: number) => MaybePromise<void>;
-  }) => {
-    log.info('Starting extracting partners entries');
-    await nonJobListsPageActions.extractEntries({
-      page,
-      log,
+  extractLocationsLinks: async <T>(options: ExtractEntriesOptions<LocationListEntry, T>) => {
+    options.log.info('Starting extracting partners entries');
+    await jobRelatedListsPageActions.extractEntries({
+      ...options,
       onData: async (entries, tabIndex) => {
         // Processing specific to https://www.profesia.sk/praca/zoznam-lokalit/
         const isSlovakEntries = tabIndex === 0;
@@ -91,85 +80,92 @@ export const nonJobListsPageActions = {
             country: isSlovakEntries ? 'Slovenská republika' : lastHeadingTitle,
           })
         );
-        await onData(processedEntries, tabIndex);
+        await options.onData(processedEntries, tabIndex);
       },
     });
-    log.info('Done extracting location entries');
+    options.log.info('Done extracting location entries');
   },
 
-  extractEntries: async ({
-    page,
+  extractEntries: async <T>({
+    domLib,
     onData,
+    onFetchHTML,
     log,
-  }: {
-    page: Page;
-    log: Log;
-    onData: (data: RawExtractedLink[], tabIndex: number) => MaybePromise<void>;
-  }) => {
-    log.info('Collecting tabs information');
-    // Some pages have navigation to split up the links, some don't
-    const pageNavLoc = page.locator('.nav-tabs a');
-    const pageHasNav = await pageNavLoc.count();
-    // If there's no navigation on the page, we still want to trigger the next section of code once
-    const maybePagesNavLocs = pageHasNav ? await pageNavLoc.all() : [null];
-    log.info(`Found ${maybePagesNavLocs[0] ? maybePagesNavLocs.length : 0} tabs`);
+  }: ExtractEntriesOptions<RawExtractedLink, T>) => {
+    const pageNavTexts = jobRelatedListsDOMActions.extractNavTabs({ domLib, log }); // prettier-ignore
+    // If there's no navigation on the page, we still want to run the next section of code once
+    const maybePagesNavTabs = pageNavTexts.length ? pageNavTexts : [null];
 
-    await serialAsyncMap(maybePagesNavLocs, async (pageNavLoc, tabIndex) => {
-      if (pageHasNav && pageNavLoc) log.info(`Extracting entries for tab ${await pageNavLoc?.textContent()}`); // prettier-ignore
+    const baseUrl = domLib.url();
+    if (!baseUrl) throw Error('Cannot fetch entries for individual tabs - URL is missing');
 
-      await generalPageActions.clickAwayCookieConsent({ page, log });
+    await serialAsyncMap(maybePagesNavTabs, async (tabText, tabIndex) => {
+      // To fetch a particular page, use ?tab_index=0
+      const urlObj = new URL(baseUrl);
+      urlObj.searchParams.set('tab_index', tabIndex.toString());
 
-      if (pageNavLoc) {
-        log.info(`Clicking on tab`);
-        await pageNavLoc.click();
-        log.info(`Done clicking on tab`);
-      }
+      log.info(`Fetching entries for tab ${tabText}`);
+      const tabPageHTML = await onFetchHTML({ url: urlObj });
+      log.info(`Extracting entries for tab ${tabText}`);
 
-      const entries = await nonJobListsPageActions.extractEntriesOnTab({ page, log });
+      const tabCheerioDom = loadCheerio(tabPageHTML);
+      const tabDomLib = cheerioDOMLib(tabCheerioDom, baseUrl);
+      const entries = jobRelatedListsDOMActions.extractEntriesOnTab({ domLib: tabDomLib, log }); // prettier-ignore
 
-      log.info(`Calling callback with ${entries.length} extracted entries`);
+      log.info(`Calling callback with ${entries.length} entries extracted from tab ${tabText}`);
       await onData(entries, tabIndex);
-      log.info(`DONE Calling callback with ${entries.length} extracted entries`);
+      log.info(`DONE Calling callback with ${entries.length} entries extracted from tab ${tabText}`); // prettier-ignore
     });
   },
+};
 
-  extractEntriesOnTab: async ({ page, log }: { page: Page; log: Log }) => {
+export const jobRelatedListsDOMActions = {
+  extractNavTabs: <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }) => {
+    log.info('Collecting tabs information');
+    const rootEl = domLib.root();
+
+    // Some pages have navigation to split up the links, some don't
+    const pageNavTabEls = domLib.findMany(rootEl, '.nav-tabs a');
+    const pageNavTexts = pageNavTabEls.map((el) => domLib.text(el));
+    log.info(`Found ${pageNavTexts.length} tabs`);
+    return pageNavTexts;
+  },
+
+  extractEntriesOnTab: <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }) => {
     log.info('Starting extracting tab content entries');
-    const entries = await page.locator('h1').evaluate((titleEl) => {
-      const linksContainer = titleEl.parentElement;
+    const rootEl = domLib.root();
+    const baseUrl = domLib.url();
 
-      const linkEls = [
-        ...((linksContainer?.querySelectorAll('.card a') || []) as HTMLAnchorElement[]),
-      ]
-        // Ignore anchor links, like the alphabet links here
-        // https://www.profesia.sk/praca/zoznam-spolocnosti/
-        .filter((linkEl) => !linkEl.href.startsWith('#'));
+    const linksContainer = domLib.findOne(rootEl, 'h1', (el) => domLib.parent(el));
+    const linkEls = domLib.findMany(linksContainer, '.card a').filter((linkEl) => {
+      // Ignore anchor links, like the alphabet links here
+      // https://www.profesia.sk/praca/zoznam-spolocnosti/
+      const href = domLib.href(linkEl, { baseUrl });
+      return href ? !domLib.href(linkEl, { baseUrl })?.startsWith('#') : null;
+    });
 
-      let lastHeadingTitle: string;
-      return linkEls.map((linkEl): RawExtractedLink => {
-        const url = linkEl.href.startsWith('/')
-          ? resolveUrlPath(page.url(), linkEl.href)
-          : linkEl.href;
-        const isHeading = linkEl.querySelector('h2');
+    let lastHeadingTitle: string | null;
+    const entries = linkEls.map((linkEl): RawExtractedLink => {
+      const url = domLib.href(linkEl, { baseUrl });
+      const isHeading = domLib.findOne(linkEl, 'h2');
 
-        let count: number;
-        let name: string;
+      let count: number;
+      let name: string | null;
 
-        if (isHeading) {
-          // Get count
-          const countEl = linkEl.querySelector('span');
-          count = Number.parseInt(countEl?.textContent || '0');
-          // Remove the span, so we can then easily get the name
-          countEl?.remove();
-          name = lastHeadingTitle = linkEl.textContent || '';
-        } else {
-          name = linkEl.textContent || '';
-          const countEl = linkEl.parentElement?.querySelector('span');
-          count = Number.parseInt(countEl?.textContent || '0');
-        }
+      if (isHeading) {
+        // Get count
+        const countEl = domLib.findOne(linkEl, 'span');
+        count = domLib.textAsNumber(countEl, { mode: 'int', removeWhitespace: true }) ?? 0;
+        // Remove the span, so we can then easily get the name
+        domLib.remove(countEl);
+        name = lastHeadingTitle = domLib.text(linkEl);
+      } else {
+        name = domLib.text(linkEl);
+        const countEl = domLib.parent(linkEl, (el) => domLib.findOne(el, 'span'));
+        count = domLib.textAsNumber(countEl, { mode: 'int', removeWhitespace: true }) ?? 0;
+      }
 
-        return { url, name, count, lastHeadingTitle };
-      });
+      return { url, name, count, lastHeadingTitle };
     });
 
     log.info(`Found ${entries.length} entries.`);

@@ -19,7 +19,7 @@ export interface RouteMatcher<
   Ctx extends CrawlingContext = CrawlingContext<BasicCrawler>
 > {
   name: string;
-  to: Exclude<keyof Labels, symbol> | null;
+  handlerId: Exclude<keyof Labels, symbol> | null;
   match: (
     url: string,
     ctx: Ctx,
@@ -126,12 +126,12 @@ export const setupDefaultRoute = async <
 ) => {
   /** Redirect the URL to the labelled route identical to route's name */
   const defaultAction: RouteMatcher<Labels, Ctx>['action'] = async (url, ctx, route) => {
-    const handler = route.to != null && handlers[route.to];
+    const handler = route.handlerId != null && handlers[route.handlerId];
     if (!handler) {
-      ctx.log.error(`No handler found for route ${route.name} (${route.to}). URL will not be processed. URL: ${url}`); // prettier-ignore
+      ctx.log.error(`No handler found for route ${route.name} (${route.handlerId}). URL will not be processed. URL: ${url}`); // prettier-ignore
       return;
     }
-    ctx.log.info(`Passing URL to handler ${route.to}. URL: ${url}`);
+    ctx.log.info(`Passing URL to handler ${route.handlerId}. URL: ${url}`);
     await handler(ctx);
   };
 
@@ -153,7 +153,7 @@ export const setupDefaultRoute = async <
         log.error(`No route matched URL. URL will not be processed. URL: ${url}`); // prettier-ignore
         return;
       }
-      log.info(`URL matched route ${route.name} (${route.to}). URL: ${url}`);
+      log.info(`URL matched route ${route.name} (handlerId: ${route.handlerId}). URL: ${url}`);
       await (route.action ?? defaultAction)(url, ctx as any, route as any, handlers);
     })
   );

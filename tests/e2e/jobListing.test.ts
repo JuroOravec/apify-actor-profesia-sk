@@ -2,9 +2,15 @@ import { describe, it, vi, beforeEach, expect } from 'vitest';
 import Joi from 'joi';
 
 import { runActorTest } from '../setup/apify';
-import { simpleJobOfferValidation, detailedJobOfferValidation } from '../utils/assert';
+import {
+  simpleJobOfferValidation,
+  detailedJobOfferValidation,
+  joiEmploymentType,
+  joiStrNotEmptyNullable,
+} from '../utils/assert';
 import { routeLabels } from '../../src/constants';
 import type { SimpleProfesiaSKJobOfferItem } from '../../src/types';
+import { sortUrl } from '../../src/utils/url';
 
 const log = (...args) => console.log(...args);
 
@@ -18,6 +24,11 @@ const jobListings = [
   { name: 'language listing', url: 'https://www.profesia.sk/praca/anglicky-jazyk/', numOfAssertCalls: 2  },
   { name: 'location listing', url: 'https://www.profesia.sk/praca/okres-pezinok/', numOfAssertCalls: 2  },
 ];
+
+const customJobOfferValidation = detailedJobOfferValidation.keys({
+  employmentTypes: Joi.array().items(joiEmploymentType),
+  startDate: joiStrNotEmptyNullable,
+});
 
 describe(
   routeLabels.JOB_LISTING,
@@ -58,7 +69,7 @@ describe(
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[], done) => {
           expect(data.length).toBeGreaterThan(0);
           data.forEach((d) => Joi.assert(d, simpleJobOfferValidation));
-          expect(data[0].listingUrl).toBe('https://www.profesia.sk/praca/?count_days=70&remote_work=2&salary=6&salary_period=h&search_anywhere=asis'); // prettier-ignore
+          expect(sortUrl(data[0].listingUrl)).toBe(sortUrl('https://www.profesia.sk/praca/?count_days=70&remote_work=2&salary=6&salary_period=h&search_anywhere=asis')); // prettier-ignore
           done();
         },
       });
@@ -115,7 +126,7 @@ describe(
         },
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[]) => {
           expect(data.length).toBeGreaterThan(0);
-          data.forEach((d) => Joi.assert(d, detailedJobOfferValidation));
+          data.forEach((d) => Joi.assert(d, customJobOfferValidation));
           expect(data[0].offerUrl).not.toBe('https://www.profesia.sk/praca');
         },
         onBatchAddRequests: (requests) => {
@@ -128,5 +139,5 @@ describe(
       });
     });
   },
-  { timeout: 30_000 }
+  { timeout: 20_000 }
 );

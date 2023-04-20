@@ -1,5 +1,4 @@
 import type { Log } from 'apify';
-import { AnyNode, Cheerio, CheerioAPI } from 'cheerio';
 import { chunk } from 'lodash';
 
 import type {
@@ -10,6 +9,7 @@ import type {
   ProfesiaSkJobOfferSalaryFields,
   DetailedProfesiaSKJobOfferItem,
 } from '../types';
+import type { DOMLib } from '../utils/dom';
 
 const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string }> = {
   fte: { urlPath: 'plny-uvazok', text: 'plný úväzok' },
@@ -51,42 +51,43 @@ const descriptionSections = [
   },
 ] as const;
 
-export const jobDetailPageActions = {
+export const jobDetailDOMActions = {
   // - https://www.profesia.sk/praca/komix-sk/O4556386
   // - https://www.profesia.sk/praca/accenture/O4491399
   // - https://www.profesia.sk/praca/gohealth/O3964543
   // - https://www.profesia.sk/praca/ing-lukas-hromjak/O4068250
-  extractJobDetail: ({
-    cheerioDom,
+  extractJobDetail: <T>({
+    domLib,
     log,
-    url,
     jobData,
   }: {
-    cheerioDom: CheerioAPI;
+    domLib: DOMLib<T>;
     log: Log;
-    url?: string;
     /**
      * In case we've come across this job ad on a listing page, we pass it here
      * in case there's some data that was available then which is not here */
     jobData?: SimpleProfesiaSKJobOfferItem;
   }): DetailedProfesiaSKJobOfferItem => {
     log.info(`Extracting job details from the page`);
-    const containerEl = cheerioDom('#content .container');
-    const entryEl = containerEl.find('#detail .card-content');
+    const rootEl = domLib.root();
 
-    const labels = containerEl
-      .find('.label')
-      .map((i, el) => cheerioDom(el).text()?.trim().toLocaleLowerCase())
-      .toArray()
-      .filter(Boolean);
+    const containerEl = domLib.findOne(rootEl, '#content .container');
+    const entryEl = domLib.findOne(containerEl, '#detail .card-content');
 
-    const offerUrl = url ?? null;
+    const labels = domLib
+      .findMany(containerEl, '.label')
+      .map((el) => domLib.textAsLower(el))
+      .filter(Boolean) as string[];
+
+    const offerUrl = domLib.url();
     const offerId = offerUrl?.match(/O\d{2,}/)?.[0] ?? null;
 
-    const basicFields = jobDetailPageActions.extractJobDetailBasicInfo(cheerioDom, entryEl);
-    const salaryFields = jobDetailPageActions.extractJobDetailSalary(entryEl);
-    const descriptionFields = jobDetailPageActions.extractJobDetailDescriptionInfo(cheerioDom, entryEl); // prettier-ignore
-    const categFields = jobDetailPageActions.extractJobDetailCategories(cheerioDom, entryEl);
+    const salaryText = domLib.findOne(entryEl, '.salary-range', (el) => domLib.text(el));
+    const salaryFields = jobDetailMethods.parseSalaryText(salaryText);
+
+    const basicFields = jobDetailDOMActions.extractJobDetailBasicInfo(domLib, entryEl);
+    const descriptionFields = jobDetailDOMActions.extractJobDetailDescriptionInfo(domLib, entryEl); // prettier-ignore
+    const categFields = jobDetailDOMActions.extractJobDetailCategories(domLib, entryEl);
 
     const entry = {
       // Add the fields we've got from listing page
@@ -109,8 +110,102 @@ export const jobDetailPageActions = {
     return entry;
   },
 
-  extractJobDetailSalary: (entryEl?: Cheerio<AnyNode>): ProfesiaSkJobOfferSalaryFields => {
-    const salaryText = entryEl?.find('.salary-range')?.text()?.trim() ?? null;
+  extractJobDetailBasicInfo: <T>(domLib: DOMLib<T>, entryEl: T | null) => {
+    const offerName = domLib.findOne(entryEl, '[itemprop="title"]', (el) => domLib.text(el));
+
+    const baseUrl = domLib.url();
+    const employerName = domLib.findOne(entryEl, '[itemprop="hiringOrganization"]', (el) => domLib.text(el)); // prettier-ignore
+    const employerUrl = domLib.findOne(entryEl, '.easy-design-btn-offer-list', (el) => domLib.href(el, { baseUrl })); // prettier-ignore
+    const employerLogoUrl = domLib.findOne(entryEl, '.easy-design-logo img', (el) => domLib.src(el, { baseUrl })); // prettier-ignore
+
+    const employmentTypesText = domLib.findOne(entryEl, '[itemprop="employmentType"]', (el) => domLib.text(el)); // prettier-ignore
+    const employmentTypes = Object.entries(employmentTypeInfo).reduce<EmploymentType[]>((agg, [key, { text }]) => {
+      if (employmentTypesText?.includes(text)) agg.push(key as EmploymentType);
+      return agg;
+    }, []); // prettier-ignore
+
+    const startDate = domLib.findOne(entryEl, '.panel-body > .row:nth-child(2) > div:nth-child(1) span', (el) => domLib.text(el)); // prettier-ignore
+    const location = domLib.findOne(entryEl, '[itemprop="jobLocation"]', (el) => domLib.text(el));
+
+    const phoneNumbers = domLib
+      .findMany(entryEl, '.details-section .tel', (el) => domLib.text(el))
+      .filter((el) => el) as string[];
+
+    const datePosted = domLib.findOne(entryEl, '[itemprop="datePosted"]', (el) => domLib.text(el));
+
+    return {
+      offerName,
+      employerName,
+      employerUrl,
+      employerLogoUrl,
+      employmentTypes,
+      startDate,
+      location,
+      phoneNumbers,
+      datePosted,
+    };
+  },
+
+  extractJobDetailDescriptionInfo: <T>(domLib: DOMLib<T>, entryEl: T | null) => {
+    const descriptionInfo = descriptionSections.reduce<ProfesiaSkJobOfferDescriptionFields>(
+      (agg, { subsections, selector }) => {
+        const sectionEl = domLib.findOne(entryEl, selector);
+        domLib.findOne(sectionEl, '.subtitle-line', (el) => domLib.remove(el));
+
+        const sectionEls = domLib.children(sectionEl);
+        chunk(sectionEls, 2).forEach(([titleEl, contentEl]) => {
+          const titleText = domLib.textAsLower(titleEl);
+
+          for (const [subsection, fragments] of Object.entries(subsections)) {
+            if (fragments.some((text: string) => titleText?.includes(text))) {
+              domLib.findMany(contentEl, '.text-gray', (el) => domLib.remove(el));
+              const key = subsection as keyof ProfesiaSkJobOfferDescriptionFields;
+              agg[key] = domLib.text(contentEl);
+            }
+          }
+        });
+        return agg;
+      },
+      {} as any
+    );
+
+    return descriptionInfo;
+  },
+
+  extractJobDetailCategories: <T>(domLib: DOMLib<T>, entryEl: T | null) => {
+    const baseUrl = domLib.url();
+
+    const locationCategs: JobOfferCategoryItem[] = [];
+    const positionCategs: JobOfferCategoryItem[] = [];
+
+    let currHeading: string | null;
+    // prettier-ignore
+    domLib.findOne(entryEl, '.overall-info .hidden-xs', (el) => domLib.children(el))?.forEach((el) => {
+      const nodeName = domLib.nodeName(el);
+      if (nodeName === 'STRONG') {
+        currHeading = domLib.textAsLower(el);
+        return;
+      }
+      if (nodeName === 'A' && currHeading?.includes('lokalit')) {
+        locationCategs.push({
+          url: domLib.href(el, { baseUrl }),
+          name: domLib.text(el),
+        });
+      }
+      if (nodeName === 'A' && currHeading?.includes('pozícia')) {
+        positionCategs.push({
+          url: domLib.href(el, { baseUrl }),
+          name: domLib.text(el),
+        });
+      }
+    });
+
+    return { locationCategs, positionCategs };
+  },
+};
+
+export const jobDetailMethods = {
+  parseSalaryText: (salaryText: string | null): ProfesiaSkJobOfferSalaryFields => {
     // Try to parse texts like "Od 6,5 EUR/hod."
     let parsedSalary = salaryText?.match(/^[a-z]*\s*(?<lowVal>[\d, ]+)\s*(?<curr>[\w\p{L}\p{M}\p{Zs}]+)\/(?<period>\w+)/iu); // prettier-ignore
     // Try to parse texts like "35 000 - 45 000 Kč/mesiac"
@@ -131,98 +226,5 @@ export const jobDetailPageActions = {
       salaryCurrency,
       salaryPeriod,
     };
-  },
-
-  extractJobDetailBasicInfo: (cheerioDom: CheerioAPI, entryEl?: Cheerio<AnyNode>) => {
-    const offerName = entryEl?.find('[itemprop="title"]')?.first().text()?.trim() ?? null;
-
-    const employerName = entryEl?.find('[itemprop="hiringOrganization"]')?.first().text()?.trim() ?? null; // prettier-ignore
-    const employerUrl = entryEl?.find('.easy-design-btn-offer-list')?.first().prop('href') ?? null; // prettier-ignore
-    const employerLogoUrl = entryEl?.find('.easy-design-logo img')?.first().prop('src') ?? null; // prettier-ignore
-
-    const employmentTypesText = entryEl?.find('[itemprop="employmentType"]')?.first().text()?.trim() ?? null; // prettier-ignore
-    const employmentTypes = Object.entries(employmentTypeInfo).reduce<EmploymentType[]>((agg, [key, { text }]) => {
-      if (employmentTypesText?.includes(text)) agg.push(key as EmploymentType);
-      return agg;
-    }, []); // prettier-ignore
-
-    const startDate = entryEl?.find('.panel-body > .row:nth-child(2) > div:nth-child(1) span')?.first().text()?.trim() ?? null; // prettier-ignore
-    const location = entryEl?.find('[itemprop="jobLocation"]')?.first().text()?.trim() ?? null; // prettier-ignore
-
-    const phoneNumbers =
-      entryEl
-        ?.find('.details-section .tel')
-        .map((i, el) => cheerioDom(el).text()?.trim())
-        .toArray()
-        .filter(Boolean) ?? [];
-
-    const datePosted = entryEl?.find('[itemprop="datePosted"]')?.first().text()?.trim() ?? null; // prettier-ignore
-
-    return {
-      offerName,
-      employerName,
-      employerUrl,
-      employerLogoUrl,
-      employmentTypes,
-      startDate,
-      location,
-      phoneNumbers,
-      datePosted,
-    };
-  },
-
-  extractJobDetailDescriptionInfo: (cheerioDom: CheerioAPI, entryEl?: Cheerio<AnyNode>) => {
-    const descriptionInfo = descriptionSections.reduce<ProfesiaSkJobOfferDescriptionFields>(
-      (agg, { subsections, selector }) => {
-        const sectionEl = entryEl?.find(selector).first();
-        sectionEl?.find('.subtitle-line')?.remove();
-
-        const sectionEls = sectionEl?.children().toArray().map((el) => cheerioDom(el)); // prettier-ignore
-        chunk(sectionEls, 2).forEach(([titleEl, contentEl]) => {
-          const titleText = titleEl.text()?.trim().toLocaleLowerCase();
-
-          for (const [subsection, fragments] of Object.entries(subsections)) {
-            if (fragments.some((text: string) => titleText?.includes(text))) {
-              contentEl.find('.text-gray').remove();
-              const key = subsection as keyof ProfesiaSkJobOfferDescriptionFields;
-              agg[key] = contentEl.text()?.trim() ?? null; // prettier-ignore
-            }
-          }
-        });
-        return agg;
-      },
-      {} as any
-    );
-
-    return descriptionInfo;
-  },
-
-  extractJobDetailCategories: (cheerioDom: CheerioAPI, entryEl?: Cheerio<AnyNode>) => {
-    const locationCategs: JobOfferCategoryItem[] = [];
-    const positionCategs: JobOfferCategoryItem[] = [];
-
-    let currHeading: string;
-    // prettier-ignore
-    entryEl?.find('.overall-info .hidden-xs')?.first().children().toArray().forEach((el) => {
-      const chEl = cheerioDom(el);
-      if (el.tagName === 'STRONG') {
-        currHeading = chEl?.text()?.trim().toLocaleLowerCase() || '';
-        return;
-      }
-      if (el.tagName === 'A' && currHeading.includes('lokalit')) {
-        locationCategs.push({
-          url: chEl.prop('href') ?? null,
-          name: chEl.text()?.trim() ?? null,
-        });
-      }
-      if (el.tagName === 'A' && currHeading.includes('pozícia')) {
-        positionCategs.push({
-          url: chEl.prop('href') ?? null,
-          name: chEl.text()?.trim() ?? null,
-        });
-      }
-    });
-
-    return { locationCategs, positionCategs };
   },
 };

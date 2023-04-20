@@ -1,5 +1,6 @@
-import type { Page } from 'playwright';
-import type { Log, PlaywrightCrawler } from 'crawlee';
+import type { Log } from 'crawlee';
+import type { OptionsInit } from 'got-scraping';
+import { load as loadCheerio } from 'cheerio';
 
 import type {
   EmploymentType,
@@ -8,14 +9,24 @@ import type {
   WorkFromHomeType,
   ProfesiaSkActorInput,
 } from '../types';
-import { routeLabels } from '../constants';
 import type { MaybePromise } from '../utils/types';
-import { generalPageActions } from './general';
+import { DOMLib, cheerioDOMLib, strAsNumber } from '../utils/dom';
+import { jobDetailMethods } from './jobDetail';
+import { equalUrls } from '../utils/url';
 
 interface PageCountInfo {
   total: number;
   upperPageEnd: number;
   lowerPageEnd: number;
+}
+
+interface ExtractJobOffersOptions<TEl> {
+  domLib: DOMLib<TEl>;
+  log: Log;
+  input: ProfesiaSkActorInput;
+  onFetchHTML: (overrideOptions?: Partial<OptionsInit>) => Promise<string>;
+  onData: (data: SimpleProfesiaSKJobOfferItem[]) => MaybePromise<void>;
+  onNextPage: (url: string) => MaybePromise<void>;
 }
 
 const workFromHomeCodes: Record<WorkFromHomeType, string> = {
@@ -37,148 +48,149 @@ const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string
   internship: { urlPath: 'internship-staz', text: 'internship, stáž' },
 };
 
-// TODO - could be optimized to use Cheerio instead of Playwright / Puppeteer
 export const jobListingPageActions = {
-  extractJobOffers: async ({
-    page,
-    log,
-    crawler,
-    input,
-    onData,
-  }: {
-    page: Page;
-    log: Log;
-    crawler: PlaywrightCrawler;
-    input: ProfesiaSkActorInput;
-    onData: (data: SimpleProfesiaSKJobOfferItem[]) => MaybePromise<void>;
-  }) => {
+  // prettier-ignore
+  extractJobOffers: async <T>({ domLib: origDomLib, log, onNextPage, input, onFetchHTML, onData }: ExtractJobOffersOptions<T>) => {
     const { jobOfferCountOnly } = input;
+    const origUrl = origDomLib.url();
 
     // Navigate to URL that has filters applied
-    log.info(`Generating URL that has filters applied. OLD URL: ${page.url()}`);
-    const newUrl = jobListingPageActions.createUrlWithFilters({ page, log, input });
-    log.info(`Redirecting to URL that has filters applied. NEW URL: ${newUrl}`);
-    await page.goto(newUrl);
+    log.info(`Generating URL that has filters applied. OLD URL: ${origUrl}`);
+    const newUrl = jobListingMethods.createUrlWithFilters({ url: origUrl, log, input });
+    if (!newUrl || !origUrl) throw Error (`Something went wrong, one or both URLs are missing: ${JSON.stringify({ newUrl, origUrl })}`);
 
-    const pageCountInfo = await jobListingPageActions.parsePageCount({ page, log }); // prettier-ignore
-    log.info(`Total ${pageCountInfo.total} entries found for URL ${newUrl}`);
+    const hasUrlChanged = !equalUrls(origUrl, newUrl);
+    
+    let domLib = origDomLib;
+    if (hasUrlChanged) {
+      log.info(`Redirecting to URL that has filters applied. NEW URL: ${newUrl}`);
+      domLib = await onFetchHTML({ url: newUrl }).then((html) => cheerioDOMLib(loadCheerio(html), newUrl) as DOMLib<any>);
+    } else {
+      log.info(`Generated URL with filters is the same as current URL`);
+    }
+
+    const pageCountInfo = jobListingDOMActions.parsePageCount({ domLib, log }); // prettier-ignore
+    if (pageCountInfo) {
+      log.info(`Total ${pageCountInfo.total} entries found for URL ${newUrl}`);
+    } else {
+      log.warning('The page does not contain pagination info. We currently use this info to know how many items were scraped. This scraper might scrape more entries than was set.'); // prettier-ignore
+    }
 
     // Leave after printing the count
-    if (jobOfferCountOnly) return;
+    if (jobOfferCountOnly) {
+      log.info('Actor is in debugging mode. Entries are not scraped. Leaving now.');
+      return;
+    }
 
-    await generalPageActions.clickAwayCookieConsent({ page, log });
+    const unadjustedEntries = await jobListingDOMActions.extractJobOfferEntries({ domLib, log });
+    if (!unadjustedEntries.length) {
+      log.info('Stopping scraping - no entries found. We assume this is the end of pagination');
+      return;
+    }
 
-    const unadjustedEntries = await jobListingPageActions.extractJobOfferEntries({ page, log });
-    const { entries, isLimitReached } = jobListingPageActions.shortenEntriesToMaxLen({ entries: unadjustedEntries, input, pageCountInfo }); // prettier-ignore
+    const { entries, isLimitReached } = jobListingMethods.shortenEntriesToMaxLen({ entries: unadjustedEntries, input, pageCountInfo }); // prettier-ignore
 
     log.info(`Calling callback with ${entries.length} extracted entries`);
     await onData(entries);
-    log.info(`DONE Calling callback with ${entries.length} extracted entries`);
+    log.info(`DONE calling callback with ${entries.length} extracted entries`);
 
-    // Navigate to the next page
-    if (!isLimitReached) {
-      const nextPageUrl = await jobListingPageActions.getNextPageUrl({ page, log });
-      if (nextPageUrl) {
-        await crawler.addRequests([{ url: nextPageUrl, label: routeLabels.JOB_LISTING }]);
-      }
+    // Schedule the next page
+    if (!isLimitReached && entries.length) {
+      const nextPageUrl = jobListingMethods.getNextPageUrl({ url: newUrl, log });
+      log.info('Scheduling next pagination page for scraping');
+      await onNextPage(nextPageUrl);
+      log.info('Done scheduling next pagination page for scraping');
+    } else {
+      if (isLimitReached) log.info('Stopping pagination - already have max entries');
     }
   },
+};
 
-  extractJobOfferEntries: async ({ page, log }: { page: Page; log: Log }) => {
-    // Find and extract data
+export const jobListingDOMActions = {
+  // prettier-ignore
+  extractJobOfferEntries: async <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }) => {
     log.info(`Extracting entries from the page`);
-    const entries = await page.locator('.list-row:not(.native-agent)').evaluateAll((els) => {
-      return els.map((el) => {
-        const employerName = el.querySelector('.employer')?.textContent?.trim() ?? null;
-        const employerUrl = el.querySelector<HTMLAnchorElement>('.offer-company-logo-link')?.href ?? null; // prettier-ignore
-        const employerLogoUrl = el.querySelector<HTMLImageElement>('.offer-company-logo-link img')?.src ?? null; // prettier-ignore
+    const rootEl = domLib.root();
+    const url = domLib.url();
+    
+    // Find and extract data
+    const entries = domLib.findMany(rootEl, '.list-row:not(.native-agent)', (el) => {
+      const employerName = domLib.findOne(el, '.employer', (el) => domLib.text(el));
+      const employerUrl = domLib.findOne(el, '.offer-company-logo-link', (el) => domLib.href(el, { baseUrl: url })); // prettier-ignore
+      const employerLogoUrl = domLib.findOne(el, '.offer-company-logo-link img', (el) => domLib.src(el, { baseUrl: url })); // prettier-ignore
 
-        const offerUrlEl = el.querySelector<HTMLAnchorElement>('h2 a');
-        const offerUrl = offerUrlEl?.href ?? null;
-        const offerName = offerUrlEl?.textContent?.trim() ?? null;
-        const offerId = offerUrl?.match(/O\d{2,}/)?.[0] ?? null;
+      const offerUrlEl = domLib.findOne(el, 'h2 a');
+      const offerUrl = domLib.href(offerUrlEl, { baseUrl: url });
+      const offerName = domLib.text(offerUrlEl);
+      const offerId = offerUrl?.match(/O\d{2,}/)?.[0] ?? null;
 
-        const location = el.querySelector('.job-location')?.textContent?.trim() ?? null;
+      const location = domLib.findOne(el, '.job-location', (el) => domLib.text(el));
 
-        const salaryLabelEl = el.querySelector('.label-group > a[data-dimension7="Salary label"]'); // prettier-ignore
-        const otherLabelEls = [...el.querySelectorAll('.label-group > a:not([data-dimension7="Salary label"])')]; // prettier-ignore
+      const salaryText = domLib.findOne(el, '.label-group > a[data-dimension7="Salary label"]', (el) => domLib.text(el)); // prettier-ignore
+      const salaryFields = jobDetailMethods.parseSalaryText(salaryText);
 
-        const labels = otherLabelEls
-          .map((el) => el.textContent?.trim())
-          .filter(Boolean) as string[];
+      // prettier-ignore
+      const labels = domLib
+        .findMany(el, '.label-group > a:not([data-dimension7="Salary label"])', (el) => domLib.text(el))
+        .filter(Boolean) as string[];
 
-        const salaryText = salaryLabelEl?.textContent?.trim() ?? null;
-        // Try to parse texts like "Od 6,5 EUR/hod."
-        let parsedSalary = salaryText?.match(/^[a-z]*\s*(?<lowVal>[\d, ]+)\s*(?<curr>[\w\p{L}\p{M}\p{Zs}]+)\/(?<period>\w+)/iu); // prettier-ignore
-        // Try to parse texts like "35 000 - 45 000 Kč/mesiac"
-        if (!parsedSalary) parsedSalary = salaryText?.match(/^(?<lowVal>[\d,. ]+)\s*-\s*(?<upVal>[\d,. ]+)(?<curr>[\w\p{L}\p{M}\p{Zs}]+)\/(?<period>\w+)/iu); // prettier-ignore
+      const footerInfoEl = domLib.findOne(el, '.list-footer .info');
+      const lastChangeRelativeTimeEl = domLib.findOne(footerInfoEl, 'strong');
+      const lastChangeRelativeTime = domLib.text(lastChangeRelativeTimeEl);
+      // Remove the element so it's easier to get the text content
+      domLib.remove(lastChangeRelativeTimeEl);
+      const lastChangeTypeText = domLib.textAsLower(footerInfoEl);
+      const lastChangeType = lastChangeTypeText === 'pridané' ? 'added' : 'modified';
 
-        const { groups } = parsedSalary || { groups: { lowVal: '', upVal: '', curr: '', period: '' } }; // prettier-ignore
-        const {
-          lowVal: salaryRangeLower,
-          upVal: salaryRangeUpper,
-          curr: salaryCurrency,
-          period: salaryPeriod,
-        } = groups || {};
+      return {
+        listingUrl: url,
 
-        const footerInfoEl = el.querySelector('.list-footer .info');
-        const lastChangeRelativeTimeEl = footerInfoEl?.querySelector('strong');
-        const lastChangeRelativeTime = lastChangeRelativeTimeEl?.textContent?.trim() ?? null;
-        // Remove the element so it's easier to get the text content
-        lastChangeRelativeTimeEl?.remove();
-        const lastChangeTypeText = footerInfoEl?.textContent?.trim().toLocaleLowerCase();
-        const lastChangeType = lastChangeTypeText === 'pridané' ? 'added' : 'modified';
+        employerName,
+        employerUrl,
+        employerLogoUrl,
 
-        return {
-          listingUrl: window.location.href,
+        offerName,
+        offerUrl,
+        offerId,
 
-          employerName,
-          employerUrl,
-          employerLogoUrl,
+        location,
+        labels,
+        lastChangeRelativeTime,
+        lastChangeType,
 
-          offerName,
-          offerUrl,
-          offerId,
-
-          salaryRange: salaryText,
-          salaryRangeLower: salaryRangeLower != null ? Number.parseInt(salaryRangeLower.replace(/\s/g, '')) : null, // prettier-ignore
-          salaryRangeUpper: salaryRangeUpper != null ? Number.parseInt(salaryRangeUpper.replace(/\s/g, '')) : null, // prettier-ignore
-          salaryCurrency,
-          salaryPeriod,
-
-          location,
-          labels,
-          lastChangeRelativeTime,
-          lastChangeType,
-        } satisfies SimpleProfesiaSKJobOfferItem;
-      });
+        ...salaryFields,
+      } satisfies SimpleProfesiaSKJobOfferItem;
     });
+
     log.info(`Found ${entries.length} entries.`);
     return entries;
   },
 
-  getNextPageUrl: async ({ page, log }: { page: Page; log: Log }) => {
-    log.info('Parsing next page URL');
+  parsePageCount: <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }): PageCountInfo | null => {
+    log.info('Parsing results count');
+    const rootEl = domLib.root();
 
-    // Navigate to the next page
-    const nextPageLoc = page.locator('.pagination .next');
-    const hasNextPage = await nextPageLoc.count();
-    if (!hasNextPage) {
-      log.info('No next page found');
-      return null;
-    }
+    const toNum = (t: string) => strAsNumber(t, { removeWhitespace: true, mode: 'int' }) ?? 0;
 
-    const nextPageUrl = await nextPageLoc.evaluate<string, HTMLAnchorElement>((el) => el.href);
-    log.info(`Next page found. URL: ${nextPageUrl}`);
-    return nextPageUrl;
+    const countText = domLib.findOne(rootEl, '.offer-counter', (el) => domLib.text(el));
+    if (!countText) return null;
+
+    const [rawCurrRange, rawTotal] = countText?.split('z').map((t) => t.trim()) ?? [];
+    const total = toNum(rawTotal);
+    const [lowerPageEnd, upperPageEnd] = rawCurrRange?.split('-').map((t) => toNum(t));
+
+    log.info(`Done parsing results count: ${JSON.stringify({ total, upperPageEnd, lowerPageEnd })}`); // prettier-ignore
+    return { total, upperPageEnd, lowerPageEnd };
   },
+};
 
+export const jobListingMethods = {
   createUrlWithFilters: ({
-    page,
+    url,
     log,
     input,
   }: {
-    page: Page;
+    url: string | null;
     log: Log;
     input: ProfesiaSkActorInput;
   }) => {
@@ -191,7 +203,8 @@ export const jobListingPageActions = {
       jobOfferFilterRemoteWorkType,
     } = input;
 
-    const url = page.url();
+    if (!url) return null;
+
     const urlObj = new URL(url);
 
     // Setup query filter - https://www.profesia.sk/praca/administrativny-pracovnik-referent/?search_anywhere=tech
@@ -232,21 +245,6 @@ export const jobListingPageActions = {
     return urlObj.href;
   },
 
-  parsePageCount: async ({ page, log }: { page: Page; log: Log }) => {
-    log.info('Parsing results count');
-
-    const parsedCount = await page.locator('.offer-counter').evaluate((el): PageCountInfo => {
-      const toNum = (t: string) => Number.parseInt(t.replace(/\s/g, '') || '0');
-      const [rawCurrRange, rawTotal] = el.textContent?.split('z').map((t) => t.trim()) ?? [];
-      const total = toNum(rawTotal);
-      const [lowerPageEnd, upperPageEnd] = rawCurrRange.split('-').map((t) => toNum(t));
-      return { total, upperPageEnd, lowerPageEnd };
-    });
-
-    log.info(`Done parsing results count: ${JSON.stringify(parsedCount)}`);
-    return parsedCount;
-  },
-
   shortenEntriesToMaxLen: ({
     input,
     entries,
@@ -254,8 +252,12 @@ export const jobListingPageActions = {
   }: {
     input: ProfesiaSkActorInput;
     entries: SimpleProfesiaSKJobOfferItem[];
-    pageCountInfo: PageCountInfo;
+    pageCountInfo: PageCountInfo | null;
   }) => {
+    if (!pageCountInfo) {
+      return { entries, isLimitReached: false };
+    }
+
     const { jobOfferFilterMaxCount } = input;
     // Check if we've reached the limit for max entries
     const isLimitReached =
@@ -268,5 +270,16 @@ export const jobListingPageActions = {
       ? entries
       : entries.slice(0, jobOfferFilterMaxCount - entries.length);
     return { isLimitReached, entries: adjustedEntries };
+  },
+
+  getNextPageUrl: ({ url, log }: { url: string; log: Log }) => {
+    log.info(`Creating next page URL from URL: ${url}`);
+    const urlObj = new URL(url);
+    const currPageNum = Number.parseInt(urlObj.searchParams.get('page_num') ?? '1');
+    const nextPageNum = currPageNum + 1;
+    urlObj.searchParams.set('page_num', nextPageNum.toString());
+    const nextPageUrl = urlObj.href;
+    log.info(`Done creating next page URL: ${nextPageUrl}`);
+    return nextPageUrl;
   },
 };

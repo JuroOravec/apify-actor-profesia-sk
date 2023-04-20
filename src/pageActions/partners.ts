@@ -1,6 +1,6 @@
 import type { Log } from 'apify';
-import { AnyNode, Cheerio, CheerioAPI } from 'cheerio';
-import { resolveUrlPath } from '../utils/url';
+
+import type { DOMLib } from '../utils/dom';
 
 export interface PartnerEntry {
   name: string | null;
@@ -14,22 +14,16 @@ export interface PartnerEntry {
  * Actions for pages like this:
  * - https://www.profesia.sk/partneri
  */
-export const partnersPageActions = {
+export const partnersDOMActions = {
   /** Extract partners links from https://www.profesia.sk/partneri */
-  extractPartnerEntries: ({
-    url,
-    cheerioDom,
-    log,
-  }: {
-    url: string;
-    cheerioDom: CheerioAPI;
-    log: Log;
-  }) => {
+  // prettier-ignore
+  extractPartnerEntries: <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }) => {
     log.info('Starting extracting partners entries');
+    const rootEl = domLib.root();
 
     log.info('Collecting partners categories');
-    const tabNames = cheerioDom('.nav-tabs a').toArray().map((el) => cheerioDom(el).text()?.trim()).filter(Boolean); // prettier-ignore
-    const tabCards = cheerioDom('.tab-content .card').toArray().map((el) => cheerioDom(el)); // prettier-ignore
+    const tabNames = domLib.findMany(rootEl, '.nav-tabs a', (el) => domLib.text(el)).filter(Boolean) as string[]; // prettier-ignore
+    const tabCards = domLib.findMany(rootEl, '.tab-content .card');
     log.info(`Found ${tabNames.length} partners categories ${JSON.stringify(tabNames)}`);
 
     const entries = tabCards
@@ -37,8 +31,9 @@ export const partnersPageActions = {
         const category = tabNames[tabIndex];
         log.info(`Extracting entries for category ${category}`);
 
-        const categEntries = tabCardEl.find('.row').toArray().map((el) => cheerioDom(el))
-        .map((entryEl) => partnersPageActions.extractSinglePartnerEntry({ url, entryEl, category })); // prettier-ignore
+        const categEntries = domLib.findMany(tabCardEl, '.row', (entryEl) => {
+          return partnersDOMActions.extractSinglePartnerEntry({ domLib, entryEl, category }); // prettier-ignore
+        });
 
         log.info(`Found ${categEntries.length} entries for category ${category}`);
 
@@ -50,25 +45,25 @@ export const partnersPageActions = {
     return entries;
   },
 
-  extractSinglePartnerEntry: ({
-    url: domainUrl,
+  extractSinglePartnerEntry: <T>({
+    domLib,
     entryEl,
     category,
   }: {
-    url: string;
-    entryEl: Cheerio<AnyNode>;
+    domLib: DOMLib<T>;
+    entryEl: T;
     category: string;
   }): PartnerEntry => {
-    let logoUrl = entryEl.find('img')?.first().prop('src')?.trim() ?? null;
-    if (logoUrl && logoUrl.startsWith('/')) logoUrl = resolveUrlPath(domainUrl, logoUrl);
+    const baseUrl = domLib.url();
+    const logoUrl = domLib.findOne(entryEl, 'img', (el) => domLib.src(el, { baseUrl }));
 
-    const infoEl = entryEl.find('div:nth-child(2)').first();
-    const urlEl = infoEl?.find('a').first();
-    const url = urlEl?.prop('href') ?? null;
-    const name = urlEl?.text()?.trim() ?? null;
-    urlEl?.remove(); // Remove el so description textContent is easy to take
-
-    const description: string | null = infoEl?.text()?.trim() || null;
+    const infoEl = domLib.findOne(entryEl, 'div:nth-child(2)');
+    const urlEl = domLib.findOne(infoEl, 'a');
+    const url = domLib.href(urlEl, { baseUrl });
+    const name = domLib.text(urlEl);
+    // Remove el so description text is easy to take
+    domLib.remove(urlEl);
+    const description = domLib.text(infoEl);
 
     return { name, url, description, logoUrl, category };
   },

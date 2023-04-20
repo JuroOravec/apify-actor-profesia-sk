@@ -8,14 +8,15 @@ import {
   setupDefaultRoute,
 } from './lib/router';
 import { playwrightHandlerWithApifyErrorCapture } from './lib/errorHandler';
-import { GenericListEntry, nonJobListsPageActions } from './pageActions/jobRelatedLists';
-import { PartnerEntry, partnersPageActions } from './pageActions/partners';
+import { GenericListEntry, jobRelatedListsPageActions } from './pageActions/jobRelatedLists';
+import { partnersDOMActions } from './pageActions/partners';
 import type { SimpleProfesiaSKJobOfferItem, ProfesiaSkActorInput } from './types';
 import { pushDataWithMetadata } from './utils/actor';
 import { datasetTypeToUrl, routeLabels } from './constants';
 import { jobListingPageActions } from './pageActions/jobListing';
-import { jobDetailPageActions } from './pageActions/jobDetail';
+import { jobDetailDOMActions } from './pageActions/jobDetail';
 import { serialAsyncMap, wait } from './utils/async';
+import { cheerioDOMLib } from './utils/dom';
 
 // Originally based on https://docs.apify.com/academy/expert-scraping-with-apify/solutions/using-storage-creating-tasks
 
@@ -35,12 +36,12 @@ const defaultRoutes = createPlaywrightRouteMatchers<typeof routeLabels>([
   {
     // Check if user give us URL of the main page. If so, redirect them to job listing page https://www.profesia.sk/praca
     name: 'Main page',
-    to: null,
+    handlerId: null,
     // Check for main page like https://www.profesia.sk/?#
     match: (url) => url.match(/[\W]profesia\.sk\/?(?:[?#~]|$)/i),
     action: async (url, ctx, _, handlers) => {
-      await ctx.page.goto(datasetTypeToUrl.jobOffers);
-      await handlers.JOB_LISTING(ctx);
+      ctx.log.info(`Redirecting to ${datasetTypeToUrl.jobOffers}`);
+      await ctx.crawler.addRequests([datasetTypeToUrl.jobOffers], { forefront: true });
     },
   },
 
@@ -52,7 +53,7 @@ const defaultRoutes = createPlaywrightRouteMatchers<typeof routeLabels>([
     // - https://www.profesia.sk/praca/zoznam-spolocnosti/
     // - https://www.profesia.sk/praca/zoznam-lokalit/
     name: routeLabels.JOB_RELATED_LIST,
-    to: routeLabels.JOB_RELATED_LIST,
+    handlerId: routeLabels.JOB_RELATED_LIST,
     match: (url) => url.match(/[\W]profesia\.sk\/praca\/zoznam-[a-z0-9-]+\/?(?:[?#~]|$)/i),
   },
 
@@ -61,7 +62,7 @@ const defaultRoutes = createPlaywrightRouteMatchers<typeof routeLabels>([
     // - https://www.profesia.sk/praca/accenture/C3691
     // - https://www.profesia.sk/praca/365-bank/C232838
     name: 'Company detail - custom',
-    to: null,
+    handlerId: null,
     match: async (url, { page }) => {
       return isUrlOfCompanyProfile(url) && await page.locator('body.listing.custom-design').count(); // prettier-ignore
     },
@@ -74,7 +75,7 @@ const defaultRoutes = createPlaywrightRouteMatchers<typeof routeLabels>([
     name: 'Company detail - standard',
     // Company page with standard design is just a job listing with extra infobox for the company.
     // Eg consider this https://www.profesia.sk/praca/123kurier/C238652
-    to: routeLabels.JOB_LISTING,
+    handlerId: routeLabels.JOB_LISTING,
     match: async (url, { page }) => {
       return isUrlOfCompanyProfile(url) && await page.locator('body.listing:not(.custom-design)').count(); // prettier-ignore
     },
@@ -87,7 +88,7 @@ const defaultRoutes = createPlaywrightRouteMatchers<typeof routeLabels>([
     // - https://www.profesia.sk/praca/accenture/O4491399
     // - https://www.profesia.sk/praca/gohealth/O3964543
     name: routeLabels.JOB_DETAIL,
-    to: routeLabels.JOB_DETAIL,
+    handlerId: routeLabels.JOB_DETAIL,
     match: (url) => isUrlOfJobOffer(url),
   },
 
@@ -98,14 +99,14 @@ const defaultRoutes = createPlaywrightRouteMatchers<typeof routeLabels>([
     // - https://www.profesia.sk/praca/anglicky-jazyk/
     // - https://www.profesia.sk/praca/okres-pezinok/
     name: routeLabels.JOB_LISTING,
-    to: routeLabels.JOB_LISTING,
+    handlerId: routeLabels.JOB_LISTING,
     match: (url) => url.match(/[\W]profesia\.sk\/praca\//i),
   },
 
   {
     // Check for partners page like https://www.profesia.sk/partneri/?#
     name: routeLabels.PARTNERS,
-    to: routeLabels.PARTNERS,
+    handlerId: routeLabels.PARTNERS,
     match: (url) => url.match(/[\W]profesia\.sk\/partneri\/?(?:[?#~]|$)/i),
   },
 ]);
@@ -125,7 +126,7 @@ const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
 ): Record<keyof typeof routeLabels, RouteHandler<Ctx>> => {
   const handlers = {
     JOB_LISTING: playwrightHandlerWithApifyErrorCapture(async (ctx) => {
-      const { page, log, crawler } = ctx;
+      const { request, log } = ctx;
       const { jobOfferDetailed } = input;
 
       const onData = async (entries: SimpleProfesiaSKJobOfferItem[]) => {
@@ -149,7 +150,8 @@ const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
           log.info(`Done fetching details page (ID: ${entry.offerId}) URL: ${entry.offerUrl}`);
 
           const cheerioDom = cheerio.load(entryHtml);
-          const jobDetail = jobDetailPageActions.extractJobDetail({ cheerioDom, log, url: entry.offerUrl, jobData: entry }); // prettier-ignore
+          const domLib = cheerioDOMLib(cheerioDom, entry.offerUrl);
+          const jobDetail = jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: entry }); // prettier-ignore
 
           await wait(100);
           return jobDetail;
@@ -157,7 +159,18 @@ const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
         await pushDataWithMetadata(detailedEntries, ctx);
       };
 
-      await jobListingPageActions.extractJobOffers({ page, log, crawler, input, onData });
+      const cheerioDom = await ctx.parseWithCheerio();
+      const domLib = cheerioDOMLib(cheerioDom, request.loadedUrl || request.url);
+      await jobListingPageActions.extractJobOffers({
+        domLib,
+        log,
+        input,
+        onFetchHTML: (opts) => ctx.sendRequest(opts).then((d) => d.body),
+        onData,
+        onNextPage: async (url) => {
+          await ctx.crawler.addRequests([{ url, label: routeLabels.JOB_LISTING }]);
+        },
+      });
     }),
 
     // - https://www.profesia.sk/praca/komix-sk/O4556386
@@ -168,31 +181,39 @@ const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
       const { log, request } = ctx;
 
       const cheerioDom = await ctx.parseWithCheerio();
-      const entry = jobDetailPageActions.extractJobDetail({ cheerioDom, log, url: request.loadedUrl, jobData: request.userData?.offer }); // prettier-ignore
+      const domLib = cheerioDOMLib(cheerioDom, request.loadedUrl || request.url);
+      const entry = jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: request.userData?.offer }); // prettier-ignore
       await pushDataWithMetadata(entry, ctx);
     }),
 
     JOB_RELATED_LIST: playwrightHandlerWithApifyErrorCapture(async (ctx) => {
-      const { page, request, log } = ctx;
+      const { request, log } = ctx;
 
       const onData = async (data: GenericListEntry[]) => {
         await pushDataWithMetadata(data, ctx);
       };
 
-      const isLocationsPage = (request.loadedUrl || request.url).match(/[\W]profesia\.sk\/praca\/zoznam-lokalit/i); // prettier-ignore
+      const cheerioDom = await ctx.parseWithCheerio();
+      const url = request.loadedUrl || request.url;
+      const domLib = cheerioDOMLib(cheerioDom, url);
+      const isLocationsPage = url.match(/[\W]profesia\.sk\/praca\/zoznam-lokalit/i); // prettier-ignore
       const extractFn = isLocationsPage
-        ? nonJobListsPageActions.extractLocationsLinks
-        : nonJobListsPageActions.extractGenericLinks;
-      await extractFn({ page, log, onData });
+        ? jobRelatedListsPageActions.extractLocationsLinks
+        : jobRelatedListsPageActions.extractGenericLinks;
+      await extractFn({
+        domLib,
+        log,
+        onFetchHTML: (opts) => ctx.sendRequest(opts).then((d) => d.body),
+        onData,
+      });
     }),
 
     PARTNERS: playwrightHandlerWithApifyErrorCapture(async (ctx) => {
       const cheerioDom = await ctx.parseWithCheerio();
-      const entries = partnersPageActions.extractPartnerEntries({
-        url: ctx.request.url,
-        cheerioDom,
-        log: ctx.log,
-      });
+      const domLib = cheerioDOMLib(cheerioDom, ctx.request.loadedUrl || ctx.request.url);
+
+      const entries = partnersDOMActions.extractPartnerEntries({ domLib, log: ctx.log });
+
       await pushDataWithMetadata(entries, ctx);
     }),
   };
