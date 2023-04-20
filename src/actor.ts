@@ -1,5 +1,5 @@
 import { Actor } from 'apify';
-import { PlaywrightCrawler, PlaywrightCrawlerOptions } from 'crawlee';
+import { CheerioCrawler, CheerioCrawlerOptions } from 'crawlee';
 
 import type { ProfesiaSkActorInput } from './types';
 import { stats } from './lib/stats';
@@ -68,7 +68,7 @@ setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
 // - It's available only to partners (so they can reshare content), and you need to pay for it.
 //   - https://podpora.profesia.sk/897202-Export-pracovn%C3%BDch-pon%C3%BAk
 
-export const run = async (crawlerConfig?: PlaywrightCrawlerOptions): Promise<void> => {
+export const run = async (crawlerConfig?: CheerioCrawlerOptions): Promise<void> => {
   // See docs:
   // - https://docs.apify.com/sdk/js/
   // - https://docs.apify.com/academy/deploying-your-code/inputs-outputs#accepting-input-with-the-apify-sdk
@@ -92,7 +92,7 @@ export const run = async (crawlerConfig?: PlaywrightCrawlerOptions): Promise<voi
 
 const createCrawler = async (
   input: ProfesiaSkActorInput,
-  crawlerConfig?: PlaywrightCrawlerOptions
+  crawlerConfig?: CheerioCrawlerOptions
 ) => {
   const { router } = await setupRouter(input);
 
@@ -100,9 +100,10 @@ const createCrawler = async (
     ? await Actor.createProxyConfiguration()
     : undefined;
 
-  return new PlaywrightCrawler({
+  return new CheerioCrawler({
     proxyConfiguration,
-    headless: true,
+    // headless: true,
+    maxRequestsPerMinute: 150,
     // See https://docs.apify.com/academy/expert-scraping-with-apify/solutions/rotating-proxies
     // useSessionPool: true,
     // sessionPoolOptions: {},

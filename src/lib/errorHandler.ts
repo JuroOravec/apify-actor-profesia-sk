@@ -1,6 +1,10 @@
 import { Actor, Log } from 'apify';
 import {
+  BasicCrawlingContext,
+  CheerioCrawlingContext,
   CrawlingContext,
+  HttpCrawlingContext,
+  JSDOMCrawlingContext,
   PlaywrightCrawlingContext,
   PuppeteerCrawlingContext,
   playwrightUtils,
@@ -147,5 +151,9 @@ export const handlerWithApifyErrorCapture = <Ctx extends CrawlingContext>(
   return wrapperHandler;
 };
 
+export const basicHandlerWithApifyErrorCapture = <Ctx extends BasicCrawlingContext>(...args: Parameters<typeof handlerWithApifyErrorCapture<Ctx>>) => handlerWithApifyErrorCapture<Ctx>(...args); // prettier-ignore
+export const httpHandlerWithApifyErrorCapture = <Ctx extends HttpCrawlingContext>(...args: Parameters<typeof handlerWithApifyErrorCapture<Ctx>>) => handlerWithApifyErrorCapture<Ctx>(...args); // prettier-ignore
+export const jsdomHandlerWithApifyErrorCapture = <Ctx extends JSDOMCrawlingContext>(...args: Parameters<typeof handlerWithApifyErrorCapture<Ctx>>) => handlerWithApifyErrorCapture<Ctx>(...args); // prettier-ignore
 export const playwrightHandlerWithApifyErrorCapture = <Ctx extends PlaywrightCrawlingContext>(...args: Parameters<typeof handlerWithApifyErrorCapture<Ctx>>) => handlerWithApifyErrorCapture<Ctx>(...args); // prettier-ignore
+export const cheerioHandlerWithApifyErrorCapture = <Ctx extends CheerioCrawlingContext>(...args: Parameters<typeof handlerWithApifyErrorCapture<Ctx>>) => handlerWithApifyErrorCapture<Ctx>(...args); // prettier-ignore
 export const puppeteerHandlerWithApifyErrorCapture = <Ctx extends PuppeteerCrawlingContext>(...args: Parameters<typeof handlerWithApifyErrorCapture<Ctx>>) => handlerWithApifyErrorCapture<Ctx>(...args); // prettier-ignore

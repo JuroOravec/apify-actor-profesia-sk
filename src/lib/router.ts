@@ -1,6 +1,10 @@
 import {
   BasicCrawler,
+  BasicCrawlingContext,
+  CheerioCrawlingContext,
   CrawlingContext,
+  HttpCrawlingContext,
+  JSDOMCrawlingContext,
   PlaywrightCrawlingContext,
   PuppeteerCrawlingContext,
   RouterHandler,
@@ -37,23 +41,33 @@ export interface RouteMatcher<
 export const createRouteMatchers = <
   Labels extends Record<string, unknown>,
   Ctx extends CrawlingContext = CrawlingContext<BasicCrawler>
->(
-  matchers: RouteMatcher<Labels, Ctx>[]
-) => matchers;
+>(matchers: RouteMatcher<Labels, Ctx>[]) => matchers; // prettier-ignore
 
+// Context-specific variants
+export const createBasicRouteMatchers = <
+  Labels extends Record<string, unknown>,
+  Ctx extends BasicCrawlingContext = BasicCrawlingContext
+>(matchers: RouteMatcher<Labels, Ctx>[]) => matchers; // prettier-ignore
+export const createHttpRouteMatchers = <
+  Labels extends Record<string, unknown>,
+  Ctx extends HttpCrawlingContext = HttpCrawlingContext
+>(matchers: RouteMatcher<Labels, Ctx>[]) => matchers; // prettier-ignore
+export const createJsdomRouteMatchers = <
+  Labels extends Record<string, unknown>,
+  Ctx extends JSDOMCrawlingContext = JSDOMCrawlingContext
+>(matchers: RouteMatcher<Labels, Ctx>[]) => matchers; // prettier-ignore
+export const createCheerioRouteMatchers = <
+  Labels extends Record<string, unknown>,
+  Ctx extends CheerioCrawlingContext = CheerioCrawlingContext
+>(matchers: RouteMatcher<Labels, Ctx>[]) => matchers; // prettier-ignore
 export const createPlaywrightRouteMatchers = <
   Labels extends Record<string, unknown>,
   Ctx extends PlaywrightCrawlingContext = PlaywrightCrawlingContext
->(
-  matchers: RouteMatcher<Labels, Ctx>[]
-) => matchers;
-
+>(matchers: RouteMatcher<Labels, Ctx>[]) => matchers; // prettier-ignore
 export const createPuppeteerRouteMatchers = <
   Labels extends Record<string, unknown>,
   Ctx extends PuppeteerCrawlingContext = PuppeteerCrawlingContext
->(
-  matchers: RouteMatcher<Labels, Ctx>[]
-) => matchers;
+>(matchers: RouteMatcher<Labels, Ctx>[]) => matchers; // prettier-ignore
 
 export const registerHandlers = async <
   Labels extends Record<string, unknown>,
@@ -139,7 +153,9 @@ export const setupDefaultRoute = async <
     handlerWithApifyErrorCapture(async (ctx) => {
       const { page, log: parentLog } = ctx;
       const log = parentLog.child({ prefix: '[Router] ' });
-      const url = await (page as CommonPage).url();
+      const url = page
+        ? await (page as any as CommonPage).url()
+        : ctx.request.loadedUrl || ctx.request.url;
 
       let route: RouteMatcher<Labels, Ctx>;
       for (const currRoute of routes) {

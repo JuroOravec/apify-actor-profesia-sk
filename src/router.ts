@@ -1,13 +1,13 @@
-import { PlaywrightCrawlingContext, createPlaywrightRouter } from 'crawlee';
+import { CheerioCrawlingContext, createCheerioRouter } from 'crawlee';
 import * as cheerio from 'cheerio';
 
 import {
   RouteHandler,
-  createPlaywrightRouteMatchers,
+  createCheerioRouteMatchers,
   registerHandlers,
   setupDefaultRoute,
 } from './lib/router';
-import { playwrightHandlerWithApifyErrorCapture } from './lib/errorHandler';
+import { cheerioHandlerWithApifyErrorCapture } from './lib/errorHandler';
 import { GenericListEntry, jobRelatedListsPageActions } from './pageActions/jobRelatedLists';
 import { partnersDOMActions } from './pageActions/partners';
 import type { SimpleProfesiaSKJobOfferItem, ProfesiaSkActorInput } from './types';
@@ -32,7 +32,7 @@ const isUrlOfJobOffer = (url: string) =>
   // Url has /O123456 in its path (first is letter, not zero) - eg https://www.profesia.sk/praca/gohealth/O3964543
   url.match(/\/praca\/.*?\/O[0-9]{2,}/);
 
-const defaultRoutes = createPlaywrightRouteMatchers<typeof routeLabels>([
+const defaultRoutes = createCheerioRouteMatchers<typeof routeLabels>([
   {
     // Check if user give us URL of the main page. If so, redirect them to job listing page https://www.profesia.sk/praca
     name: 'Main page',
@@ -63,8 +63,11 @@ const defaultRoutes = createPlaywrightRouteMatchers<typeof routeLabels>([
     // - https://www.profesia.sk/praca/365-bank/C232838
     name: 'Company detail - custom',
     handlerId: null,
-    match: async (url, { page }) => {
-      return isUrlOfCompanyProfile(url) && await page.locator('body.listing.custom-design').count(); // prettier-ignore
+    match: async (url, ctx) => {
+      const domLib = cheerioDOMLib(ctx.$, url);
+      const rootEl = domLib.root();
+      const isCustomDesign = domLib.findMany(rootEl, 'body.listing.custom-design').length;
+      return isUrlOfCompanyProfile(url) && isCustomDesign;
     },
     action: (url, { log }) => { log.error(`UNSUPPORTED PAGE TYPE DETECTED - company page with custom design. These are not supported. URL will not be processed. URL: ${url}`); }, // prettier-ignore
   },
@@ -76,8 +79,11 @@ const defaultRoutes = createPlaywrightRouteMatchers<typeof routeLabels>([
     // Company page with standard design is just a job listing with extra infobox for the company.
     // Eg consider this https://www.profesia.sk/praca/123kurier/C238652
     handlerId: routeLabels.JOB_LISTING,
-    match: async (url, { page }) => {
-      return isUrlOfCompanyProfile(url) && await page.locator('body.listing:not(.custom-design)').count(); // prettier-ignore
+    match: async (url, ctx) => {
+      const domLib = cheerioDOMLib(ctx.$, url);
+      const rootEl = domLib.root();
+      const isNotCustomDesign = domLib.findMany(rootEl, 'body.listing:not(.custom-design)').length;
+      return isUrlOfCompanyProfile(url) && isNotCustomDesign;
     },
   },
 
@@ -112,7 +118,7 @@ const defaultRoutes = createPlaywrightRouteMatchers<typeof routeLabels>([
 ]);
 
 export const setupRouter = async (input: ProfesiaSkActorInput) => {
-  const router = createPlaywrightRouter();
+  const router = createCheerioRouter();
 
   const handlers = await createHandlers(input);
   await setupDefaultRoute(router, defaultRoutes, handlers);
@@ -121,11 +127,11 @@ export const setupRouter = async (input: ProfesiaSkActorInput) => {
   return { router };
 };
 
-const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
+const createHandlers = <Ctx extends CheerioCrawlingContext>(
   input: ProfesiaSkActorInput
 ): Record<keyof typeof routeLabels, RouteHandler<Ctx>> => {
   const handlers = {
-    JOB_LISTING: playwrightHandlerWithApifyErrorCapture(async (ctx) => {
+    JOB_LISTING: cheerioHandlerWithApifyErrorCapture(async (ctx) => {
       const { request, log } = ctx;
       const { jobOfferDetailed } = input;
 
@@ -177,7 +183,7 @@ const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
     // - https://www.profesia.sk/praca/accenture/O4491399
     // - https://www.profesia.sk/praca/gohealth/O3964543
     // - https://www.profesia.sk/praca/ing-lukas-hromjak/O4068250
-    JOB_DETAIL: playwrightHandlerWithApifyErrorCapture(async (ctx) => {
+    JOB_DETAIL: cheerioHandlerWithApifyErrorCapture(async (ctx) => {
       const { log, request } = ctx;
 
       const cheerioDom = await ctx.parseWithCheerio();
@@ -186,7 +192,7 @@ const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
       await pushDataWithMetadata(entry, ctx);
     }),
 
-    JOB_RELATED_LIST: playwrightHandlerWithApifyErrorCapture(async (ctx) => {
+    JOB_RELATED_LIST: cheerioHandlerWithApifyErrorCapture(async (ctx) => {
       const { request, log } = ctx;
 
       const onData = async (data: GenericListEntry[]) => {
@@ -208,7 +214,7 @@ const createHandlers = <Ctx extends PlaywrightCrawlingContext>(
       });
     }),
 
-    PARTNERS: playwrightHandlerWithApifyErrorCapture(async (ctx) => {
+    PARTNERS: cheerioHandlerWithApifyErrorCapture(async (ctx) => {
       const cheerioDom = await ctx.parseWithCheerio();
       const domLib = cheerioDOMLib(cheerioDom, ctx.request.loadedUrl || ctx.request.url);
 

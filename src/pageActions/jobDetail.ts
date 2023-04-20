@@ -212,19 +212,17 @@ export const jobDetailMethods = {
     if (!parsedSalary) parsedSalary = salaryText?.match(/^(?<lowVal>[\d,. ]+)\s*-\s*(?<upVal>[\d,. ]+)(?<curr>[\w\p{L}\p{M}\p{Zs}]+)\/(?<period>\w+)/iu); // prettier-ignore
 
     const { groups } = parsedSalary || { groups: { lowVal: '', upVal: '', curr: '', period: '' } }; // prettier-ignore
-    const {
-      lowVal: salaryRangeLower,
-      upVal: salaryRangeUpper,
-      curr: salaryCurrency,
-      period: salaryPeriod,
-    } = groups || {};
+    const { lowVal, upVal, curr, period } = groups || {};
+
+    const salaryRangeLower = lowVal != null ? Number.parseInt(lowVal.replace(/\s/g, '')) : null;
+    const salaryRangeUpper = upVal != null ? Number.parseInt(upVal.replace(/\s/g, '')) : null;
 
     return {
-      salaryRange: salaryText ?? null,
-      salaryRangeLower: salaryRangeLower != null ? Number.parseInt(salaryRangeLower.replace(/\s/g, '')) : null, // prettier-ignore
-      salaryRangeUpper: salaryRangeUpper != null ? Number.parseInt(salaryRangeUpper.replace(/\s/g, '')) : null, // prettier-ignore
-      salaryCurrency,
-      salaryPeriod,
+      salaryRange: salaryText || null,
+      salaryRangeLower: Number.isNaN(salaryRangeLower) ? null : salaryRangeLower,
+      salaryRangeUpper: Number.isNaN(salaryRangeUpper) ? null : salaryRangeUpper,
+      salaryCurrency: curr || null,
+      salaryPeriod: period || null,
     };
   },
 };
