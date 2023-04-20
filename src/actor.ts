@@ -1,11 +1,18 @@
 import { Actor } from 'apify';
-import { CheerioCrawler, CheerioCrawlerOptions } from 'crawlee';
+import {
+  CheerioCrawler,
+  CheerioCrawlerOptions,
+  CheerioCrawlingContext,
+  RouterHandler,
+  createCheerioRouter,
+} from 'crawlee';
 
 import type { ProfesiaSkActorInput } from './types';
 import { stats } from './lib/stats';
 import { setupSentry } from './lib/sentry';
-import { setupRouter } from './router';
-import { datasetTypeToUrl } from './constants';
+import { createHandlers, errorCaptureHandlerWrapper, routes } from './router';
+import { datasetTypeToUrl, routeLabels } from './constants';
+import { createApiacActor } from './lib/actor';
 
 setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
 
@@ -75,27 +82,34 @@ export const run = async (crawlerConfig?: CheerioCrawlerOptions): Promise<void> 
   // - https://docs.apify.com/sdk/js/docs/upgrading/upgrading-to-v3#apify-sdk
   await Actor.main(
     async () => {
-      const inputs = (await Actor.getInput<ProfesiaSkActorInput>()) || ({} as ProfesiaSkActorInput);
-      validateActorInput(inputs);
-
-      const crawler = await createCrawler(inputs, crawlerConfig);
+      const actor = await createApiacActor<
+        CheerioCrawlingContext,
+        keyof typeof routeLabels,
+        ProfesiaSkActorInput
+      >({
+        validateInput,
+        router: createCheerioRouter(),
+        routes,
+        routeHandlers: ({ input }) => createHandlers(input!),
+        handlerWrapper: errorCaptureHandlerWrapper,
+        createCrawler: ({ router }) => createCrawler(router, crawlerConfig),
+      });
 
       const startUrls: string[] = [];
-      if (inputs.startUrls) startUrls.push(...inputs.startUrls);
-      else startUrls.push(datasetTypeToUrl[inputs.datasetType!]);
+      const { input } = actor;
+      if (input?.startUrls) startUrls.push(...input?.startUrls);
+      else if (input?.datasetType) startUrls.push(datasetTypeToUrl[input?.datasetType]);
 
-      await crawler.run(startUrls);
+      await actor.crawler.run(startUrls);
     },
     { statusMessage: 'Crawling finished!' }
   );
 };
 
 const createCrawler = async (
-  input: ProfesiaSkActorInput,
+  router: RouterHandler<CheerioCrawlingContext>,
   crawlerConfig?: CheerioCrawlerOptions
 ) => {
-  const { router } = await setupRouter(input);
-
   const proxyConfiguration = process.env.APIFY_IS_AT_HOME
     ? await Actor.createProxyConfiguration()
     : undefined;
@@ -103,6 +117,7 @@ const createCrawler = async (
   return new CheerioCrawler({
     proxyConfiguration,
     // headless: true,
+    // maxRequestsPerCrawl: 20,
     maxRequestsPerMinute: 150,
     // See https://docs.apify.com/academy/expert-scraping-with-apify/solutions/rotating-proxies
     // useSessionPool: true,
@@ -118,8 +133,8 @@ const createCrawler = async (
   });
 };
 
-const validateActorInput = (input: ProfesiaSkActorInput) => {
-  if (!input.startUrls && !input.datasetType) {
+const validateInput = (input: ProfesiaSkActorInput | null) => {
+  if (!input?.startUrls && !input?.datasetType) {
     throw Error(
       `Missing instruction for scraping - either startUrls or datasetType MUST be specified. INPUT: ${JSON.stringify(
         input
