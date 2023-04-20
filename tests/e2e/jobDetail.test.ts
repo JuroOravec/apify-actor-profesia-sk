@@ -1,15 +1,17 @@
 import { describe, it, vi, beforeEach, expect } from 'vitest';
 import Joi from 'joi';
+import { runActorTest } from 'apify-actor-utils';
 
-import { runActorTest } from '../setup/apify';
 import { routeLabels } from '../../src/constants';
 import {
   detailedJobOfferValidation,
   joiEmploymentType,
   joiStrNotEmptyNullable,
 } from '../utils/assert';
+import { run } from '../../src/actor';
 
 const log = (...args) => console.log(...args);
+const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
 const customJobOfferValidation = detailedJobOfferValidation.keys({
   employmentTypes: Joi.array().items(joiEmploymentType),
@@ -38,7 +40,9 @@ describe(
       expect.assertions(jobDetailStandardUrls.length);
       let calls = 0;
       return runActorTest({
+        vi,
         input: { startUrls: jobDetailStandardUrls },
+        runActor,
         onPushData: async (data, done) => {
           calls += 1;
           expect(data.length).toBeGreaterThan(0);
@@ -52,7 +56,9 @@ describe(
       expect.assertions(jobDetailCustomUrls.length);
       let calls = 0;
       return runActorTest({
+        vi,
         input: { startUrls: jobDetailCustomUrls },
+        runActor,
         onPushData: async (data, done) => {
           calls += 1;
           expect(data.length).toBeGreaterThan(0);

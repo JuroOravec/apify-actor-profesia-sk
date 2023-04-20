@@ -1,6 +1,7 @@
 import type { Log } from 'crawlee';
 import type { OptionsInit } from 'got-scraping';
 import { load as loadCheerio } from 'cheerio';
+import { DOMLib, cheerioDOMLib } from 'apify-actor-utils';
 
 import type {
   EmploymentType,
@@ -10,9 +11,9 @@ import type {
   ProfesiaSkActorInput,
 } from '../types';
 import type { MaybePromise } from '../utils/types';
-import { DOMLib, cheerioDOMLib, strAsNumber } from '../lib/dom';
 import { jobDetailMethods } from './jobDetail';
 import { equalUrls } from '../utils/url';
+import { strAsNumber } from '../utils/format';
 
 interface PageCountInfo {
   total: number;

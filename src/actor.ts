@@ -6,13 +6,13 @@ import {
   RouterHandler,
   createCheerioRouter,
 } from 'crawlee';
+import { createApifyActor } from 'apify-actor-utils';
 
 import type { ProfesiaSkActorInput } from './types';
 import { stats } from './lib/stats';
 import { setupSentry } from './lib/sentry';
 import { createHandlers, errorCaptureHandlerWrapper, routes } from './router';
 import { datasetTypeToUrl, routeLabels } from './constants';
-import { createApiacActor } from './lib/actor';
 
 setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
 
@@ -82,7 +82,7 @@ export const run = async (crawlerConfig?: CheerioCrawlerOptions): Promise<void> 
   // - https://docs.apify.com/sdk/js/docs/upgrading/upgrading-to-v3#apify-sdk
   await Actor.main(
     async () => {
-      const actor = await createApiacActor<
+      const actor = await createApifyActor<
         CheerioCrawlingContext,
         keyof typeof routeLabels,
         ProfesiaSkActorInput

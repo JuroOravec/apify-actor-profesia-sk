@@ -1,10 +1,10 @@
 import type { Log } from 'apify';
 import { load as loadCheerio } from 'cheerio';
 import type { OptionsInit } from 'got-scraping';
+import { DOMLib, cheerioDOMLib } from 'apify-actor-utils';
 
 import { serialAsyncMap } from '../utils/async';
 import type { MaybePromise } from '../utils/types.js';
-import { DOMLib, cheerioDOMLib } from '../lib/dom';
 
 export interface GenericListEntry {
   url: string | null;

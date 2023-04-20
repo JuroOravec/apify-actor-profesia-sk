@@ -1,7 +1,7 @@
 import { describe, it, vi, beforeEach, expect } from 'vitest';
 import Joi from 'joi';
+import { runActorTest } from 'apify-actor-utils';
 
-import { runActorTest } from '../setup/apify';
 import {
   genericEntryValidation,
   locationEntryValidation,
@@ -10,16 +10,18 @@ import {
 } from '../utils/assert';
 import { datasetTypeToUrl } from '../../src/constants';
 import type { DatasetType } from '../../src/types';
+import { run } from '../../src/actor';
 
 const log = (...args) => console.log(...args);
+const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
 // prettier-ignore
 const testCases: { datasetType: DatasetType; expectedUrl: string; schema: Joi.ObjectSchema; numOfPushDataCalls: number; numOfAssertCalls: number }[] = [
-  { datasetType: 'companies', expectedUrl: datasetTypeToUrl.companies, schema: genericEntryValidation, numOfPushDataCalls: 2, numOfAssertCalls: 2 },
+  { datasetType: 'companies', expectedUrl: datasetTypeToUrl.companies, schema: genericEntryValidation, numOfPushDataCalls: 2, numOfAssertCalls: 3 },
   { datasetType: 'industries', expectedUrl: datasetTypeToUrl.industries, schema: genericEntryValidation, numOfPushDataCalls: 1, numOfAssertCalls: 2 },
   { datasetType: 'positions', expectedUrl: datasetTypeToUrl.positions, schema: genericEntryValidation, numOfPushDataCalls: 1, numOfAssertCalls: 2 },
   { datasetType: 'languages', expectedUrl: datasetTypeToUrl.languages, schema: genericEntryValidation, numOfPushDataCalls: 1, numOfAssertCalls: 2 },
-  { datasetType: 'locations', expectedUrl: datasetTypeToUrl.locations, schema: locationEntryValidation, numOfPushDataCalls: 2, numOfAssertCalls: 2 },
+  { datasetType: 'locations', expectedUrl: datasetTypeToUrl.locations, schema: locationEntryValidation, numOfPushDataCalls: 2, numOfAssertCalls: 3 },
   { datasetType: 'partners', expectedUrl: datasetTypeToUrl.partners, schema: partnerEntryValidation, numOfPushDataCalls: 2, numOfAssertCalls: 2 },
   { datasetType: 'jobOffers', expectedUrl: datasetTypeToUrl.jobOffers, schema: simpleJobOfferValidation, numOfPushDataCalls: 1, numOfAssertCalls: 2 },
 ];
@@ -37,11 +39,13 @@ describe(
           expect.assertions(numOfAssertCalls);
           let calls = 0;
           return runActorTest({
+            vi,
             input: {
               datasetType: datasetType as DatasetType,
               jobOfferFilterMaxCount: 3,
               jobOfferDetailed: false,
             },
+            runActor,
             onBatchAddRequests: (req) => {
               expect(expectedUrl).toBe(req[0].url);
             },

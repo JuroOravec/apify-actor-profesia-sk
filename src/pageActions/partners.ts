@@ -1,6 +1,5 @@
 import type { Log } from 'apify';
-
-import type { DOMLib } from '../lib/dom';
+import type { DOMLib } from 'apify-actor-utils';
 
 export interface PartnerEntry {
   name: string | null;

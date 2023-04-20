@@ -1,5 +1,6 @@
 import type { Log } from 'apify';
 import { chunk } from 'lodash';
+import type { DOMLib } from 'apify-actor-utils';
 
 import type {
   EmploymentType,
@@ -9,7 +10,6 @@ import type {
   ProfesiaSkJobOfferSalaryFields,
   DetailedProfesiaSKJobOfferItem,
 } from '../types';
-import type { DOMLib } from '../lib/dom';
 
 const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string }> = {
   fte: { urlPath: 'plny-uvazok', text: 'plný úväzok' },

@@ -1,7 +1,7 @@
 import { describe, it, vi, beforeEach, expect } from 'vitest';
 import Joi from 'joi';
+import { runActorTest } from 'apify-actor-utils';
 
-import { runActorTest } from '../setup/apify';
 import {
   simpleJobOfferValidation,
   detailedJobOfferValidation,
@@ -11,8 +11,10 @@ import {
 import { routeLabels } from '../../src/constants';
 import type { SimpleProfesiaSKJobOfferItem } from '../../src/types';
 import { sortUrl } from '../../src/utils/url';
+import { run } from '../../src/actor';
 
 const log = (...args) => console.log(...args);
+const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
 // prettier-ignore
 const jobListings = [
@@ -42,7 +44,9 @@ describe(
         expect.assertions(numOfAssertCalls);
         let calls = 0;
         return runActorTest({
+          vi,
           input: { startUrls: [url], jobOfferFilterMaxCount: 21 },
+          runActor,
           onPushData: async (data, done) => {
             calls += 1;
             expect(data.length).toBeGreaterThan(0);
@@ -56,6 +60,7 @@ describe(
     it('configures listing filters based on actor input', () => {
       expect.assertions(2);
       return runActorTest({
+        vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
           jobOfferFilterQuery: 'asis',
@@ -66,6 +71,7 @@ describe(
           jobOfferFilterRemoteWorkType: 'partialRemote',
           jobOfferFilterLastNDays: 70,
         },
+        runActor,
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[], done) => {
           expect(data.length).toBeGreaterThan(0);
           data.forEach((d) => Joi.assert(d, simpleJobOfferValidation));
@@ -78,10 +84,12 @@ describe(
     it('Only prints the count if jobOfferCountOnly=true', () => {
       expect.assertions(2);
       return runActorTest({
+        vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
           jobOfferCountOnly: true,
         },
+        runActor,
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[]) => {
           throw Error('No data should be returned on jobOfferCountOnly=true');
         },
@@ -98,10 +106,12 @@ describe(
     it('Does not enqueue job offer details URLs if jobOfferDetailed=false', () => {
       expect.assertions(3);
       return runActorTest({
+        vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
           jobOfferFilterMaxCount: 3,
         },
+        runActor,
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[]) => {
           expect(data.length).toBeGreaterThan(0);
           data.forEach((d) => Joi.assert(d, simpleJobOfferValidation));
@@ -119,11 +129,13 @@ describe(
     it('Enqueues job offer details URLs if jobOfferDetailed=true', () => {
       expect.assertions(4);
       return runActorTest({
+        vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
           jobOfferDetailed: true,
           jobOfferFilterMaxCount: 3,
         },
+        runActor,
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[]) => {
           expect(data.length).toBeGreaterThan(0);
           data.forEach((d) => Joi.assert(d, customJobOfferValidation));

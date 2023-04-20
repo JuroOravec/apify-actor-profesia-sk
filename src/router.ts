@@ -1,23 +1,26 @@
 import { CheerioCrawlingContext } from 'crawlee';
 import * as cheerio from 'cheerio';
 import * as Sentry from '@sentry/node';
+import {
+  cheerioCaptureErrorRouteHandler,
+  createCheerioRouteMatchers,
+  cheerioDOMLib,
+  RouteHandler,
+  pushDataWithMetadata,
+} from 'apify-actor-utils';
 
-import { RouteHandler, createCheerioRouteMatchers } from './lib/router';
-import { cheerioHandlerWithApifyErrorCapture } from './lib/errorHandler';
 import { GenericListEntry, jobRelatedListsPageActions } from './pageActions/jobRelatedLists';
 import { partnersDOMActions } from './pageActions/partners';
 import type { SimpleProfesiaSKJobOfferItem, ProfesiaSkActorInput } from './types';
-import { pushDataWithMetadata } from './utils/actor';
 import { datasetTypeToUrl, routeLabels } from './constants';
 import { jobListingPageActions } from './pageActions/jobListing';
 import { jobDetailDOMActions } from './pageActions/jobDetail';
 import { serialAsyncMap, wait } from './utils/async';
-import { cheerioDOMLib } from './lib/dom';
 
 // Capture errors as a separate Apify/Actor dataset and pass errors to Sentry
 const reportingDatasetId = 'REPORTING';
-export const errorCaptureHandlerWrapper: typeof cheerioHandlerWithApifyErrorCapture = (handler) => {
-  return cheerioHandlerWithApifyErrorCapture(handler, {
+export const errorCaptureHandlerWrapper: typeof cheerioCaptureErrorRouteHandler = (handler) => {
+  return cheerioCaptureErrorRouteHandler(handler, {
     reportingDatasetId,
     allowScreenshot: true,
     onErrorCapture: ({ error, report }) => {
