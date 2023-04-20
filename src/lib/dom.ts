@@ -1,6 +1,6 @@
 import type { AnyNode, Cheerio, CheerioAPI } from 'cheerio';
 
-import { resolveUrlPath } from './url';
+import { resolveUrlPath } from '../utils/url';
 
 const strOrNull = (s: string | null, allowEmpty?: boolean) => s ? s : typeof s === 'string' && allowEmpty ? s : null; // prettier-ignore
 

@@ -10,7 +10,7 @@ import type {
   ProfesiaSkActorInput,
 } from '../types';
 import type { MaybePromise } from '../utils/types';
-import { DOMLib, cheerioDOMLib, strAsNumber } from '../utils/dom';
+import { DOMLib, cheerioDOMLib, strAsNumber } from '../lib/dom';
 import { jobDetailMethods } from './jobDetail';
 import { equalUrls } from '../utils/url';
 

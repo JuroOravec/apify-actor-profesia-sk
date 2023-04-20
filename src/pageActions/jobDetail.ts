@@ -9,7 +9,7 @@ import type {
   ProfesiaSkJobOfferSalaryFields,
   DetailedProfesiaSKJobOfferItem,
 } from '../types';
-import type { DOMLib } from '../utils/dom';
+import type { DOMLib } from '../lib/dom';
 
 const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string }> = {
   fte: { urlPath: 'plny-uvazok', text: 'plný úväzok' },

@@ -4,7 +4,7 @@ import type { OptionsInit } from 'got-scraping';
 
 import { serialAsyncMap } from '../utils/async';
 import type { MaybePromise } from '../utils/types.js';
-import { DOMLib, cheerioDOMLib } from '../utils/dom';
+import { DOMLib, cheerioDOMLib } from '../lib/dom';
 
 export interface GenericListEntry {
   url: string | null;

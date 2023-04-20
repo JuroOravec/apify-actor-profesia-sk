@@ -12,7 +12,7 @@ import { datasetTypeToUrl, routeLabels } from './constants';
 import { jobListingPageActions } from './pageActions/jobListing';
 import { jobDetailDOMActions } from './pageActions/jobDetail';
 import { serialAsyncMap, wait } from './utils/async';
-import { cheerioDOMLib } from './utils/dom';
+import { cheerioDOMLib } from './lib/dom';
 
 // Capture errors as a separate Apify/Actor dataset and pass errors to Sentry
 const reportingDatasetId = 'REPORTING';
