@@ -174,7 +174,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: Profes
         input,
         onFetchHTML: (opts) => ctx.sendRequest(opts).then((d) => d.body),
         onData,
-        onNextPage: async (url) => {
+        onScheduleNextPage: async (url) => {
           await ctx.crawler.addRequests([{ url, label: ROUTE_LABEL_ENUM.JOB_LISTING }]);
         },
       });

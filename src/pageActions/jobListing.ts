@@ -1,3 +1,4 @@
+import { Actor } from 'apify';
 import type { Log } from 'crawlee';
 import type { OptionsInit } from 'got-scraping';
 import { load as loadCheerio } from 'cheerio';
@@ -27,7 +28,7 @@ interface ExtractJobOffersOptions<TEl> {
   input: ProfesiaSkActorInput;
   onFetchHTML: (overrideOptions?: Partial<OptionsInit>) => Promise<string>;
   onData: (data: SimpleProfesiaSKJobOfferItem[]) => MaybePromise<void>;
-  onNextPage: (url: string) => MaybePromise<void>;
+  onScheduleNextPage: (url: string) => MaybePromise<void>;
 }
 
 const workFromHomeCodes: Record<WorkFromHomeType, string> = {
@@ -51,7 +52,7 @@ const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string
 
 export const jobListingPageActions = {
   // prettier-ignore
-  extractJobOffers: async <T>({ domLib: origDomLib, log, onNextPage, input, onFetchHTML, onData }: ExtractJobOffersOptions<T>) => {
+  extractJobOffers: async <T>({ domLib: origDomLib, log, onScheduleNextPage, input, onFetchHTML, onData }: ExtractJobOffersOptions<T>) => {
     const { jobOfferCountOnly } = input;
     const origUrl = origDomLib.url();
 
@@ -72,9 +73,7 @@ export const jobListingPageActions = {
 
     const pageCountInfo = jobListingDOMActions.parsePageCount({ domLib, log }); // prettier-ignore
     if (pageCountInfo) {
-      log.info(`Total ${pageCountInfo.total} entries found for URL ${newUrl}`);
-    } else {
-      log.warning('The page does not contain pagination info. We currently use this info to know how many items were scraped. This scraper might scrape more entries than was set.'); // prettier-ignore
+      log.info(`Total ${pageCountInfo.total} entries exist for current filter settings. URL: ${newUrl}`);
     }
 
     // Leave after printing the count
@@ -83,33 +82,40 @@ export const jobListingPageActions = {
       return;
     }
 
-    const unadjustedEntries = await jobListingDOMActions.extractJobOfferEntries({ domLib, log });
+    const unadjustedEntries = jobListingDOMActions.extractJobOfferEntries({ domLib, log });
     if (!unadjustedEntries.length) {
       log.info('Stopping scraping - no entries found. We assume this is the end of pagination');
       return;
     }
 
-    const { entries, isLimitReached } = jobListingMethods.shortenEntriesToMaxLen({ entries: unadjustedEntries, input, pageCountInfo }); // prettier-ignore
+    const itemCountBefore = (await (await Actor.openDataset()).getInfo())?.itemCount ?? null;
+    if (typeof itemCountBefore !== 'number') {
+      log.warning('Failed to get count of entries in dataset (AKA already collected entries). We currently use this info to know how many items were scraped. This scraper might scrape more entries than was set.'); // prettier-ignore
+    }
 
-    log.info(`Calling callback with ${entries.length} extracted entries`);
-    await onData(entries);
-    log.info(`DONE calling callback with ${entries.length} extracted entries`);
+    const { entries, isLimitReached } = jobListingMethods.shortenEntriesToMaxLen({ entries: unadjustedEntries, input, itemsCount: itemCountBefore }); // prettier-ignore
 
-    // Schedule the next page
+    // Schedule the next page.
+    // NOTE: We do this BEFORE the onData callback, so the new page can be scraped in parallel
+    // while this page might still be scraping details of entries.
     if (!isLimitReached && entries.length) {
       const nextPageUrl = jobListingMethods.getNextPageUrl({ url: newUrl, log });
       log.info('Scheduling next pagination page for scraping');
-      await onNextPage(nextPageUrl);
+      await onScheduleNextPage(nextPageUrl);
       log.info('Done scheduling next pagination page for scraping');
     } else {
       if (isLimitReached) log.info('Stopping pagination - already have max entries');
     }
+
+    log.info(`Calling callback with ${entries.length} extracted entries`);
+    await onData(entries);
+    log.info(`DONE calling callback with ${entries.length} extracted entries`);
   },
 };
 
 export const jobListingDOMActions = {
   // prettier-ignore
-  extractJobOfferEntries: async <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }) => {
+  extractJobOfferEntries: <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }) => {
     log.info(`Extracting entries from the page`);
     const rootEl = domLib.root();
     const url = domLib.url();
@@ -249,22 +255,20 @@ export const jobListingMethods = {
   shortenEntriesToMaxLen: ({
     input,
     entries,
-    pageCountInfo,
+    itemsCount,
   }: {
     input: ProfesiaSkActorInput;
     entries: SimpleProfesiaSKJobOfferItem[];
-    pageCountInfo: PageCountInfo | null;
+    itemsCount: number | null;
   }) => {
-    if (!pageCountInfo) {
+    if (!itemsCount) {
       return { entries, isLimitReached: false };
     }
 
     const { jobOfferFilterMaxCount } = input;
     // Check if we've reached the limit for max entries
     const isLimitReached =
-      jobOfferFilterMaxCount != null &&
-      pageCountInfo.lowerPageEnd <= jobOfferFilterMaxCount &&
-      jobOfferFilterMaxCount <= pageCountInfo.upperPageEnd;
+      jobOfferFilterMaxCount != null && itemsCount + entries.length >= jobOfferFilterMaxCount;
 
     // If limit reached, shorten the array as needed
     const adjustedEntries = !isLimitReached
