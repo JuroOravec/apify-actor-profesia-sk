@@ -56,8 +56,8 @@
       "description": "If checked, the scraper will obtain more detailed info for job offers by visit the details page of each job offer to extract data. If un-checked, only the data from the listing page is extracted. For details, please refer to http://apify.com/store/jurooravec/profesia-sk-scraper#output",
       "example": true,
       "default": true,
-      "groupCaption": "Job Offer Filters",
-      "groupDescription": "These filters are applied ONLY when 'Dataset type' is set to 'Job offers' (Optional)",
+      "sectionCaption": "Job Offer Filters",
+      "sectionDescription": "These filters are applied ONLY when 'Dataset type' is set to 'Job offers' (Optional)",
       "nullable": true
     },
     "jobOfferFilterQuery": {
