@@ -2,13 +2,14 @@ import type { Log } from 'apify';
 import { chunk } from 'lodash';
 import type { DOMLib } from 'apify-actor-utils';
 
-import type {
+import {
   EmploymentType,
   ProfesiaSkJobOfferDescriptionFields,
   SimpleProfesiaSKJobOfferItem,
   JobOfferCategoryItem,
   ProfesiaSkJobOfferSalaryFields,
   DetailedProfesiaSKJobOfferItem,
+  SALARY_PERIOD_ENUM,
 } from '../types';
 
 const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string }> = {
@@ -217,12 +218,18 @@ export const jobDetailMethods = {
     const salaryRangeLower = lowVal != null ? Number.parseInt(lowVal.replace(/\s/g, '')) : null;
     const salaryRangeUpper = upVal != null ? Number.parseInt(upVal.replace(/\s/g, '')) : null;
 
+    const salaryPeriod = period === 'hod'
+      ? SALARY_PERIOD_ENUM.hour
+      : period === 'mesiac'
+      ? SALARY_PERIOD_ENUM.month
+      : period; // prettier-ignore
+
     return {
       salaryRange: salaryText || null,
       salaryRangeLower: Number.isNaN(salaryRangeLower) ? null : salaryRangeLower,
       salaryRangeUpper: Number.isNaN(salaryRangeUpper) ? null : salaryRangeUpper,
-      salaryCurrency: curr || null,
-      salaryPeriod: period || null,
+      salaryCurrency: curr?.toLocaleLowerCase() || null,
+      salaryPeriod: salaryPeriod || null,
     };
   },
 };
