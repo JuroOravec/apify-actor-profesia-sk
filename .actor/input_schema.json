@@ -183,7 +183,7 @@
     "maxRequestsPerCrawl": {
       "title": "maxRequestsPerCrawl",
       "type": "integer",
-      "description": "Maximum number of pages that the crawler will open. The crawl will stop when this limit is reached. NOTE: In cases of parallel crawling, the actual number of pages visited might be slightly higher than this value.",
+      "description": "Maximum number of pages that the crawler will open. The crawl will stop when this limit is reached. <br/><br/> NOTE: In cases of parallel crawling, the actual number of pages visited might be slightly higher than this value.",
       "example": 120,
       "minimum": 1,
       "nullable": true
@@ -191,7 +191,7 @@
     "minConcurrency": {
       "title": "minConcurrency",
       "type": "integer",
-      "description": "Sets the minimum concurrency (parallelism) for the crawl. WARNING: If we set this value too high with respect to the available system memory and CPU, our crawler will run extremely slow or crash. If not sure, it's better to keep the default value and the concurrency will scale up automatically.",
+      "description": "Sets the minimum concurrency (parallelism) for the crawl.\n\nWARNING: If we set this value too high with respect to the available system memory and CPU, our crawler will run extremely slow or crash. If not sure, it's better to keep the default value and the concurrency will scale up automatically.",
       "example": 3,
       "prefill": 1,
       "minimum": 1,
