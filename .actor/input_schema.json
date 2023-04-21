@@ -56,7 +56,7 @@
       "description": "If checked, the scraper will obtain more detailed info for job offers by visit the details page of each job offer to extract data. If un-checked, only the data from the listing page is extracted. For details, please refer to http://apify.com/store/jurooravec/profesia-sk-scraper#output",
       "example": true,
       "default": true,
-      "sectionCaption": "Job Offer Filters",
+      "groupCaption": "Job Offer Filters",
       "groupDescription": "These filters are applied ONLY when 'Dataset type' is set to 'Job offers' (Optional)",
       "nullable": true
     },
@@ -162,17 +162,17 @@
 
     "maxRequestRetries": {
       "title": "maxRequestRetries",
-      "type": "number",
+      "type": "integer",
       "description": "Indicates how many times the request is retried if BasicCrawlerOptions.requestHandler fails.",
       "example": 3,
       "minimum": 0,
       "nullable": true,
       "sectionCaption": "Crawler configuration (Advanced)",
-      "groupDescription": "These options are applied directly to the Crawler. In majority of cases you don't need to change these. See https://crawlee.dev/api/basic-crawler/interface/BasicCrawlerOptions"
+      "sectionDescription": "These options are applied directly to the Crawler. In majority of cases you don't need to change these. See https://crawlee.dev/api/basic-crawler/interface/BasicCrawlerOptions"
     },
     "maxRequestsPerMinute": {
       "title": "maxRequestsPerMinute",
-      "type": "number",
+      "type": "integer",
       "description": "The maximum number of requests per minute the crawler should run. We can pass any positive, non-zero integer.",
       "example": 120,
       "minimum": 1,
@@ -180,7 +180,7 @@
     },
     "maxRequestsPerCrawl": {
       "title": "maxRequestsPerCrawl",
-      "type": "number",
+      "type": "integer",
       "description": "Maximum number of pages that the crawler will open. The crawl will stop when this limit is reached. NOTE: In cases of parallel crawling, the actual number of pages visited might be slightly higher than this value.",
       "example": 120,
       "minimum": 1,
@@ -188,7 +188,7 @@
     },
     "minConcurrency": {
       "title": "minConcurrency",
-      "type": "number",
+      "type": "integer",
       "description": "Sets the minimum concurrency (parallelism) for the crawl. WARNING: If we set this value too high with respect to the available system memory and CPU, our crawler will run extremely slow or crash. If not sure, it's better to keep the default value and the concurrency will scale up automatically.",
       "example": 3,
       "minimum": 1,
@@ -196,7 +196,7 @@
     },
     "maxConcurrency": {
       "title": "maxConcurrency",
-      "type": "number",
+      "type": "integer",
       "description": "Sets the maximum concurrency (parallelism) for the crawl.",
       "example": 3,
       "minimum": 1,
@@ -204,7 +204,7 @@
     },
     "navigationTimeoutSecs": {
       "title": "navigationTimeoutSecs",
-      "type": "number",
+      "type": "integer",
       "description": "Timeout in which the HTTP request to the resource needs to finish, given in seconds.",
       "example": 60,
       "minimum": 0,
@@ -212,7 +212,7 @@
     },
     "requestHandlerTimeoutSecs": {
       "title": "requestHandlerTimeoutSecs",
-      "type": "number",
+      "type": "integer",
       "description": "Timeout in which the function passed as BasicCrawlerOptions.requestHandler needs to finish, in seconds.",
       "example": 60,
       "minimum": 0,
