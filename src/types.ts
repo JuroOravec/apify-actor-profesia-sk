@@ -54,7 +54,7 @@ export interface ProfesiaSkActorInput extends DefaultActorInput {
   startUrls?: string[];
   /** If checked, the scraper will obtain more detailed info for job offers by visit the details page of each job offer to extract data. If un-checked, only the data from the listing page is extracted. For details, please refer to http://apify.com/store/jurooravec/profesia-sk-scraper#output */
   jobOfferDetailed?: boolean;
-  /** If given, only entries matching the query will be retrieved (full-text search) */
+  /** Comma-separated list of keywords. If given, only entries matching the query will be retrieved (full-text search) */
   jobOfferFilterQuery?: string;
   /** If set, only up to this number of entries will be extracted */
   jobOfferFilterMaxCount?: number;

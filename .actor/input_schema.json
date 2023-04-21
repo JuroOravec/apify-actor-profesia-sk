@@ -57,9 +57,9 @@
     },
     "jobOfferFilterQuery": {
       "type": "string",
-      "title": "Search query (full-text search)",
-      "description": "If given, only entries matching the query will be retrieved (full-text search)",
-      "example": "specialist",
+      "title": "Search keywords (full-text search)",
+      "description": "Comma-separated list of keywords. If given, only entries matching the keywords will be retrieved (full-text search)",
+      "example": "specialist, Bratislava",
       "editor": "textfield",
       "nullable": true
     },
