@@ -1,6 +1,8 @@
+import type { ProxyConfigurationOptions } from 'apify';
 import { fromPairs } from 'lodash';
 
 import type { ArrVal } from './utils/types';
+import { CheerioCrawlerOptions } from 'crawlee';
 
 const enumFromArray = <T extends readonly any[]>(arr: T) => {
   return fromPairs(arr.map((k) => [k, k])) as { [Key in ArrVal<T>]: Key };
@@ -23,8 +25,29 @@ export const ROUTE_LABELS = ['JOB_LISTING', 'JOB_DETAIL', 'JOB_RELATED_LIST', 'P
 export const ROUTE_LABEL_ENUM = enumFromArray(ROUTE_LABELS);
 export type RouteLabel = ArrVal<typeof ROUTE_LABELS>;
 
+/** Crawler config fields that can be overriden from the actor input */
+type OverridableCrawlerConfigActorInput = Pick<
+  CheerioCrawlerOptions,
+  | 'navigationTimeoutSecs'
+  | 'ignoreSslErrors'
+  | 'additionalMimeTypes'
+  | 'suggestResponseEncoding'
+  | 'forceResponseEncoding'
+  | 'requestHandlerTimeoutSecs'
+  | 'maxRequestRetries'
+  | 'maxRequestsPerCrawl'
+  | 'maxRequestsPerMinute'
+  | 'minConcurrency'
+  | 'maxConcurrency'
+  | 'keepAlive'
+>;
+
+export interface DefaultActorInput extends OverridableCrawlerConfigActorInput {
+  proxy?: ProxyConfigurationOptions;
+}
+
 /** Shape of the data passed to the actor from Apify */
-export interface ProfesiaSkActorInput {
+export interface ProfesiaSkActorInput extends DefaultActorInput {
   /** Choose what kind of data you want to extract - job offers, list of companies, list of industries, ... */
   datasetType?: DatasetType;
   /** URLs to start with */

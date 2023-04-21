@@ -43,6 +43,13 @@
       ],
       "editor": "requestListSources"
     },
+    "proxy": {
+      "title": "Proxy configuration",
+      "type": "object",
+      "description": "Select proxies to be used by your crawler.",
+      "editor": "proxy"
+    },
+
     "jobOfferDetailed": {
       "title": "Detailed",
       "type": "boolean",
@@ -150,6 +157,99 @@
       "default": false,
       "groupCaption": "Troubleshooting options",
       "groupDescription": "Use these to verify that your custom startUrls are correct",
+      "nullable": true
+    },
+
+    "maxRequestRetries": {
+      "title": "maxRequestRetries",
+      "type": "number",
+      "description": "Indicates how many times the request is retried if BasicCrawlerOptions.requestHandler fails.",
+      "example": 3,
+      "minimum": 0,
+      "nullable": true,
+      "sectionCaption": "Crawler configuration (Advanced)",
+      "groupDescription": "These options are applied directly to the Crawler. In majority of cases you don't need to change these. See https://crawlee.dev/api/basic-crawler/interface/BasicCrawlerOptions"
+    },
+    "maxRequestsPerMinute": {
+      "title": "maxRequestsPerMinute",
+      "type": "number",
+      "description": "The maximum number of requests per minute the crawler should run. We can pass any positive, non-zero integer.",
+      "example": 120,
+      "minimum": 1,
+      "nullable": true
+    },
+    "maxRequestsPerCrawl": {
+      "title": "maxRequestsPerCrawl",
+      "type": "number",
+      "description": "Maximum number of pages that the crawler will open. The crawl will stop when this limit is reached. NOTE: In cases of parallel crawling, the actual number of pages visited might be slightly higher than this value.",
+      "example": 120,
+      "minimum": 1,
+      "nullable": true
+    },
+    "minConcurrency": {
+      "title": "minConcurrency",
+      "type": "number",
+      "description": "Sets the minimum concurrency (parallelism) for the crawl. WARNING: If we set this value too high with respect to the available system memory and CPU, our crawler will run extremely slow or crash. If not sure, it's better to keep the default value and the concurrency will scale up automatically.",
+      "example": 3,
+      "minimum": 1,
+      "nullable": true
+    },
+    "maxConcurrency": {
+      "title": "maxConcurrency",
+      "type": "number",
+      "description": "Sets the maximum concurrency (parallelism) for the crawl.",
+      "example": 3,
+      "minimum": 1,
+      "nullable": true
+    },
+    "navigationTimeoutSecs": {
+      "title": "navigationTimeoutSecs",
+      "type": "number",
+      "description": "Timeout in which the HTTP request to the resource needs to finish, given in seconds.",
+      "example": 60,
+      "minimum": 0,
+      "nullable": true
+    },
+    "requestHandlerTimeoutSecs": {
+      "title": "requestHandlerTimeoutSecs",
+      "type": "number",
+      "description": "Timeout in which the function passed as BasicCrawlerOptions.requestHandler needs to finish, in seconds.",
+      "example": 60,
+      "minimum": 0,
+      "nullable": true
+    },
+    "keepAlive": {
+      "title": "keepAlive",
+      "type": "boolean",
+      "description": "Allows to keep the crawler alive even if the RequestQueue gets empty. With keepAlive: true the crawler will keep running, waiting for more requests to come.",
+      "nullable": true
+    },
+    "ignoreSslErrors": {
+      "title": "ignoreSslErrors",
+      "type": "boolean",
+      "description": "If set to true, SSL certificate errors will be ignored.",
+      "nullable": true
+    },
+    "additionalMimeTypes": {
+      "title": "additionalMimeTypes",
+      "type": "array",
+      "description": "An array of MIME types you want the crawler to load and process. By default, only text/html and application/xhtml+xml MIME types are supported.",
+      "editor": "stringList",
+      "uniqueItems": true,
+      "nullable": true
+    },
+    "suggestResponseEncoding": {
+      "title": "suggestResponseEncoding",
+      "type": "string",
+      "description": "By default this crawler will extract correct encoding from the HTTP response headers. There are some websites which use invalid headers. Those are encoded using the UTF-8 encoding. If those sites actually use a different encoding, the response will be corrupted. You can use suggestResponseEncoding to fall back to a certain encoding, if you know that your target website uses it. To force a certain encoding, disregarding the response headers, use forceResponseEncoding.",
+      "editor": "textfield",
+      "nullable": true
+    },
+    "forceResponseEncoding": {
+      "title": "forceResponseEncoding",
+      "type": "string",
+      "description": "By default this crawler will extract correct encoding from the HTTP response headers. Use forceResponseEncoding to force a certain encoding, disregarding the response headers. To only provide a default for missing encodings, use suggestResponseEncoding.",
+      "editor": "textfield",
       "nullable": true
     }
   }

@@ -7,20 +7,14 @@ import {
   createCheerioRouter,
 } from 'crawlee';
 import { createApifyActor } from 'apify-actor-utils';
+import { omitBy } from 'lodash';
 
-import {
-  DATASET_TYPE,
-  EMPLOYMENT_TYPE,
-  ProfesiaSkActorInput,
-  RouteLabel,
-  SALARY_PERIOD,
-  WORK_FROM_HOME_TYPE,
-} from './types';
+import type { ProfesiaSkActorInput, RouteLabel } from './types';
 import { stats } from './lib/stats';
 import { setupSentry } from './lib/sentry';
 import { createHandlers, errorCaptureHandlerWrapper, routes } from './router';
 import { datasetTypeToUrl } from './constants';
-import Joi from 'joi';
+import { validateInput } from './validation';
 
 setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
 
@@ -100,13 +94,12 @@ export const run = async (crawlerConfig?: CheerioCrawlerOptions): Promise<void> 
         routes,
         routeHandlers: ({ input }) => createHandlers(input!),
         handlerWrapper: errorCaptureHandlerWrapper,
-        createCrawler: ({ router }) => createCrawler(router, crawlerConfig),
+        createCrawler: ({ router, input }) => createCrawler({ router, input, crawlerConfig }),
       });
 
       const startUrls: string[] = [];
-      const { input } = actor;
-      if (input?.startUrls) startUrls.push(...input?.startUrls);
-      else if (input?.datasetType) startUrls.push(datasetTypeToUrl[input?.datasetType]);
+      if (actor.input?.startUrls) startUrls.push(...actor.input?.startUrls);
+      else if (actor.input?.datasetType) startUrls.push(datasetTypeToUrl[actor.input?.datasetType]);
 
       await actor.crawler.run(startUrls);
     },
@@ -114,67 +107,41 @@ export const run = async (crawlerConfig?: CheerioCrawlerOptions): Promise<void> 
   );
 };
 
-const createCrawler = async (
-  router: RouterHandler<CheerioCrawlingContext>,
-  crawlerConfig?: CheerioCrawlerOptions
-) => {
+// prettier-ignore
+const createCrawler = async ({ router, input, crawlerConfig }: {
+  input: ProfesiaSkActorInput | null;
+  router: RouterHandler<CheerioCrawlingContext>;
+  crawlerConfig?: CheerioCrawlerOptions;
+}) => {
   const proxyConfiguration = process.env.APIFY_IS_AT_HOME
-    ? await Actor.createProxyConfiguration()
+    ? await Actor.createProxyConfiguration(input?.proxy)
     : undefined;
 
   return new CheerioCrawler({
-    proxyConfiguration,
+    // ----- 1. DEFAULTS -----
+    maxRequestsPerMinute: 120,
+    // NOTE: Listing page request handler might fetch 20 requests (offer details), so we want to give it time
+    requestHandlerTimeoutSecs: 180, 
     // headless: true,
     // maxRequestsPerCrawl: 20,
-    maxRequestsPerMinute: 150,
+    
+    // SHOULD I USE THESE?
     // See https://docs.apify.com/academy/expert-scraping-with-apify/solutions/rotating-proxies
     // useSessionPool: true,
     // sessionPoolOptions: {},
 
+    // ----- 2. CONFIG FROM INPUT -----
+    ...omitBy(input ?? {}, (field) => field === undefined),
+    
+    // ----- 3. CONFIG THAT USER CANNOT CHANGE -----
+    proxyConfiguration,
     // Handle all failed requests
     failedRequestHandler: async ({ error, request }) => {
-      // Add an error for this url to our error tracker
       stats.addError(request.url, (error as Error)?.message);
     },
     requestHandler: router,
-    ...crawlerConfig,
+
+    // ----- 4. OVERRIDES - E.G. TEST CONFIG -----
+    ...omitBy(crawlerConfig ?? {}, (field) => field === undefined),
   });
-};
-
-const inpuValidationSchema = Joi.object<ProfesiaSkActorInput>({
-  datasetType: Joi.string().valid(...DATASET_TYPE).optional(), // prettier-ignore
-  startUrls: Joi.array().optional(),
-  jobOfferDetailed: Joi.boolean().optional(),
-  jobOfferFilterQuery: Joi.string().optional(),
-  jobOfferFilterMaxCount: Joi.number().min(0).integer().optional(),
-  jobOfferFilterMinSalaryValue: Joi.number().min(0).integer().optional(),
-  jobOfferFilterMinSalaryPeriod: Joi.string().valid(...SALARY_PERIOD).optional(), // prettier-ignore
-  jobOfferFilterEmploymentType: Joi.string().valid(...EMPLOYMENT_TYPE).optional(), // prettier-ignore
-  jobOfferFilterRemoteWorkType: Joi.string().valid(...WORK_FROM_HOME_TYPE).optional(), // prettier-ignore
-  jobOfferFilterLastNDays: Joi.number().min(0).integer().optional(),
-  jobOfferCountOnly: Joi.boolean().optional(),
-});
-
-const validateInput = (input: ProfesiaSkActorInput | null) => {
-  Joi.assert(input, inpuValidationSchema);
-
-  if (!input?.startUrls && !input?.datasetType) {
-    throw Error(
-      `Missing instruction for scraping - either startUrls or datasetType MUST be specified. INPUT: ${JSON.stringify(
-        input
-      )}`
-    );
-  }
-
-  if (input.startUrls && input.datasetType) {
-    throw Error(
-      `Ambiguous instruction for scraping - only ONE of startUrls or datasetType MUST be specified. INPUT: ${JSON.stringify(
-        input
-      )}`
-    );
-  }
-
-  if (!input.startUrls && !datasetTypeToUrl[input.datasetType!]) {
-    throw Error(`Invalid value for datasetType option. Got ${input.datasetType}, but allowed values are ${JSON.stringify(Object.keys(datasetTypeToUrl))} `); // prettier-ignore
-  }
 };
