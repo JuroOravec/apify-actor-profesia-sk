@@ -1,13 +1,13 @@
 {
   "title": "Profesia.sk Scraper",
-  "description": "Configure the Profesia.sk Scraper. NOTE: Either \"Dataset type\" or \"Start URLs\" must be given.",
+  "description": "Configure the Profesia.sk Scraper.<br/><br/>NOTE: Either <strong>Dataset type</strong> or <strong>Start URLs</strong> must be given.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
     "datasetType": {
       "type": "string",
       "title": "Dataset type",
-      "description": "Use this option if you want to scrape whole dataset, not just specific URLs. Choose what kind of data you want to extract - job offers, list of companies, list of industries, ... This option is ignored if 'startUrls' is given",
+      "description": "Use this option if you want to scrape a whole dataset, not just specific URLs. Among the datasets are job offers, list of companies, list of industries...<br/><br/>This option is ignored if <strong>Start URLs</strong> are given",
       "editor": "select",
       "example": "jobOffers",
       "default": "jobOffers",
@@ -35,7 +35,7 @@
     "startUrls": {
       "title": "Start URLs",
       "type": "array",
-      "description": "Select specific URLs to scrape. This option takes precedence over the 'dataset type' input. If the URL is a listing page or a company page, all entries of that list are extracted. If the URL is a company page, only that page is extracted",
+      "description": "Select specific URLs to scrape. This option takes precedence over <strong>Dataset type<strong>.<br/><br/>- If the URL is a listing page or a company page, all entries of that list are extracted.<br/>- If the URL is a job offer page, only that page is extracted<br/>- If the URL corresponds to other <strong>Dataset type</strong> (e.g. list of partners), this kind of dataset is extracted.",
       "prefill": [
         {
           "url": "https://www.profesia.sk/praca"
@@ -53,11 +53,11 @@
     "jobOfferDetailed": {
       "title": "Detailed",
       "type": "boolean",
-      "description": "If checked, the scraper will obtain more detailed info for job offers by visit the details page of each job offer to extract data. If un-checked, only the data from the listing page is extracted. For details, please refer to http://apify.com/store/jurooravec/profesia-sk-scraper#output",
+      "description": "If checked, the scraper will obtain more detailed info for job offers by visit the details page of each job offer.<br/><br/>If un-checked, only the data from the listing page is extracted.<br/><br/>For details, please refer to http://apify.com/store/jurooravec/profesia-sk-scraper#output",
       "example": true,
       "default": true,
       "sectionCaption": "Job Offer Filters",
-      "sectionDescription": "These filters are applied ONLY when 'Dataset type' is set to 'Job offers' (Optional)",
+      "sectionDescription": "These filters are applied <strong>ONLY</strong> when <strong>Dataset type</strong> is set to <strong>Job offers</strong>",
       "nullable": true
     },
     "jobOfferFilterQuery": {
@@ -71,7 +71,7 @@
     "jobOfferFilterMaxCount": {
       "title": "Max number of results",
       "type": "integer",
-      "description": "If set, only up to this number of entries will be extracted. The actual number of entries might higher than this due to multiple pages being scraped at the same time.",
+      "description": "If set, only up to this number of entries will be extracted. The actual number of entries might be higher than this due to multiple pages being scraped at the same time.",
       "example": 10,
       "minimum": 1,
       "nullable": true
@@ -163,7 +163,7 @@
     "maxRequestRetries": {
       "title": "maxRequestRetries",
       "type": "integer",
-      "description": "Indicates how many times the request is retried if BasicCrawlerOptions.requestHandler fails.",
+      "description": "Indicates how many times the request is retried if <a href=\"https://crawlee.dev/api/basic-crawler/interface/BasicCrawlerOptions#requestHandler\">BasicCrawlerOptions.requestHandler</a> fails.",
       "example": 3,
       "prefill": 3,
       "minimum": 0,
@@ -191,7 +191,7 @@
     "minConcurrency": {
       "title": "minConcurrency",
       "type": "integer",
-      "description": "Sets the minimum concurrency (parallelism) for the crawl.\n\nWARNING: If we set this value too high with respect to the available system memory and CPU, our crawler will run extremely slow or crash. If not sure, it's better to keep the default value and the concurrency will scale up automatically.",
+      "description": "Sets the minimum concurrency (parallelism) for the crawl.<br/><br/>WARNING: If we set this value too high with respect to the available system memory and CPU, our crawler will run extremely slow or crash. If not sure, it's better to keep the default value and the concurrency will scale up automatically.",
       "example": 3,
       "prefill": 1,
       "minimum": 1,
@@ -216,7 +216,7 @@
     "requestHandlerTimeoutSecs": {
       "title": "requestHandlerTimeoutSecs",
       "type": "integer",
-      "description": "Timeout in which the function passed as BasicCrawlerOptions.requestHandler needs to finish, in seconds.",
+      "description": "Timeout in which the function passed as <a href=\"https://crawlee.dev/api/basic-crawler/interface/BasicCrawlerOptions#requestHandler\">BasicCrawlerOptions.requestHandler</a> needs to finish, in seconds.",
       "example": 60,
       "prefill": 180,
       "minimum": 0,
