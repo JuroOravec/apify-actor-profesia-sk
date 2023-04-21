@@ -8,8 +8,7 @@ import {
   joiEmploymentType,
   joiStrNotEmptyNullable,
 } from '../utils/assert';
-import { routeLabels } from '../../src/constants';
-import type { SimpleProfesiaSKJobOfferItem } from '../../src/types';
+import { ROUTE_LABEL_ENUM, SimpleProfesiaSKJobOfferItem } from '../../src/types';
 import { sortUrl } from '../../src/utils/url';
 import { run } from '../../src/actor';
 
@@ -33,7 +32,7 @@ const customJobOfferValidation = detailedJobOfferValidation.keys({
 });
 
 describe(
-  routeLabels.JOB_LISTING,
+  ROUTE_LABEL_ENUM.JOB_LISTING,
   () => {
     beforeEach(() => {
       vi.resetAllMocks();

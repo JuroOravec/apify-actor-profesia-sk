@@ -8,11 +8,19 @@ import {
 } from 'crawlee';
 import { createApifyActor } from 'apify-actor-utils';
 
-import type { ProfesiaSkActorInput } from './types';
+import {
+  DATASET_TYPE,
+  EMPLOYMENT_TYPE,
+  ProfesiaSkActorInput,
+  RouteLabel,
+  SALARY_PERIOD,
+  WORK_FROM_HOME_TYPE,
+} from './types';
 import { stats } from './lib/stats';
 import { setupSentry } from './lib/sentry';
 import { createHandlers, errorCaptureHandlerWrapper, routes } from './router';
-import { datasetTypeToUrl, routeLabels } from './constants';
+import { datasetTypeToUrl } from './constants';
+import Joi from 'joi';
 
 setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
 
@@ -84,7 +92,7 @@ export const run = async (crawlerConfig?: CheerioCrawlerOptions): Promise<void> 
     async () => {
       const actor = await createApifyActor<
         CheerioCrawlingContext,
-        keyof typeof routeLabels,
+        RouteLabel,
         ProfesiaSkActorInput
       >({
         validateInput,
@@ -133,7 +141,23 @@ const createCrawler = async (
   });
 };
 
+const inpuValidationSchema = Joi.object<ProfesiaSkActorInput>({
+  datasetType: Joi.string().valid(...DATASET_TYPE).optional(), // prettier-ignore
+  startUrls: Joi.array().optional(),
+  jobOfferDetailed: Joi.boolean().optional(),
+  jobOfferFilterQuery: Joi.string().optional(),
+  jobOfferFilterMaxCount: Joi.number().min(0).integer().optional(),
+  jobOfferFilterMinSalaryValue: Joi.number().min(0).integer().optional(),
+  jobOfferFilterMinSalaryPeriod: Joi.string().valid(...SALARY_PERIOD).optional(), // prettier-ignore
+  jobOfferFilterEmploymentType: Joi.string().valid(...EMPLOYMENT_TYPE).optional(), // prettier-ignore
+  jobOfferFilterRemoteWorkType: Joi.string().valid(...WORK_FROM_HOME_TYPE).optional(), // prettier-ignore
+  jobOfferFilterLastNDays: Joi.number().min(0).integer().optional(),
+  jobOfferCountOnly: Joi.boolean().optional(),
+});
+
 const validateInput = (input: ProfesiaSkActorInput | null) => {
+  Joi.assert(input, inpuValidationSchema);
+
   if (!input?.startUrls && !input?.datasetType) {
     throw Error(
       `Missing instruction for scraping - either startUrls or datasetType MUST be specified. INPUT: ${JSON.stringify(

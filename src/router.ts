@@ -11,8 +11,13 @@ import {
 
 import { GenericListEntry, jobRelatedListsPageActions } from './pageActions/jobRelatedLists';
 import { partnersDOMActions } from './pageActions/partners';
-import type { SimpleProfesiaSKJobOfferItem, ProfesiaSkActorInput } from './types';
-import { datasetTypeToUrl, routeLabels } from './constants';
+import {
+  SimpleProfesiaSKJobOfferItem,
+  ProfesiaSkActorInput,
+  RouteLabel,
+  ROUTE_LABEL_ENUM,
+} from './types';
+import { datasetTypeToUrl } from './constants';
 import { jobListingPageActions } from './pageActions/jobListing';
 import { jobDetailDOMActions } from './pageActions/jobDetail';
 import { serialAsyncMap, wait } from './utils/async';
@@ -41,7 +46,7 @@ const isUrlOfJobOffer = (url: string) =>
   // Url has /O123456 in its path (first is letter, not zero) - eg https://www.profesia.sk/praca/gohealth/O3964543
   url.match(/\/praca\/.*?\/O[0-9]{2,}/);
 
-export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, keyof typeof routeLabels>([
+export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, RouteLabel>([
   {
     // Check if user give us URL of the main page. If so, redirect them to job listing page https://www.profesia.sk/praca
     name: 'Main page',
@@ -61,8 +66,8 @@ export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, keyof t
     // - https://www.profesia.sk/praca/zoznam-jazykovych-znalosti/
     // - https://www.profesia.sk/praca/zoznam-spolocnosti/
     // - https://www.profesia.sk/praca/zoznam-lokalit/
-    name: routeLabels.JOB_RELATED_LIST,
-    handlerLabel: routeLabels.JOB_RELATED_LIST,
+    name: ROUTE_LABEL_ENUM.JOB_RELATED_LIST,
+    handlerLabel: ROUTE_LABEL_ENUM.JOB_RELATED_LIST,
     match: (url) => url.match(/[\W]profesia\.sk\/praca\/zoznam-[a-z0-9-]+\/?(?:[?#~]|$)/i),
   },
 
@@ -87,7 +92,7 @@ export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, keyof t
     name: 'Company detail - standard',
     // Company page with standard design is just a job listing with extra infobox for the company.
     // Eg consider this https://www.profesia.sk/praca/123kurier/C238652
-    handlerLabel: routeLabels.JOB_LISTING,
+    handlerLabel: ROUTE_LABEL_ENUM.JOB_LISTING,
     match: async (url, ctx) => {
       const domLib = cheerioDOMLib(ctx.$, url);
       const rootEl = domLib.root();
@@ -102,8 +107,8 @@ export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, keyof t
     // - https://www.profesia.sk/praca/komix-sk/O4556386
     // - https://www.profesia.sk/praca/accenture/O4491399
     // - https://www.profesia.sk/praca/gohealth/O3964543
-    name: routeLabels.JOB_DETAIL,
-    handlerLabel: routeLabels.JOB_DETAIL,
+    name: ROUTE_LABEL_ENUM.JOB_DETAIL,
+    handlerLabel: ROUTE_LABEL_ENUM.JOB_DETAIL,
     match: (url) => isUrlOfJobOffer(url),
   },
 
@@ -113,15 +118,15 @@ export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, keyof t
     // - https://www.profesia.sk/praca/account-executive/
     // - https://www.profesia.sk/praca/anglicky-jazyk/
     // - https://www.profesia.sk/praca/okres-pezinok/
-    name: routeLabels.JOB_LISTING,
-    handlerLabel: routeLabels.JOB_LISTING,
+    name: ROUTE_LABEL_ENUM.JOB_LISTING,
+    handlerLabel: ROUTE_LABEL_ENUM.JOB_LISTING,
     match: (url) => url.match(/[\W]profesia\.sk\/praca\//i),
   },
 
   {
     // Check for partners page like https://www.profesia.sk/partneri/?#
-    name: routeLabels.PARTNERS,
-    handlerLabel: routeLabels.PARTNERS,
+    name: ROUTE_LABEL_ENUM.PARTNERS,
+    handlerLabel: ROUTE_LABEL_ENUM.PARTNERS,
     match: (url) => url.match(/[\W]profesia\.sk\/partneri\/?(?:[?#~]|$)/i),
   },
 ]);
@@ -170,7 +175,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: Profes
         onFetchHTML: (opts) => ctx.sendRequest(opts).then((d) => d.body),
         onData,
         onNextPage: async (url) => {
-          await ctx.crawler.addRequests([{ url, label: routeLabels.JOB_LISTING }]);
+          await ctx.crawler.addRequests([{ url, label: ROUTE_LABEL_ENUM.JOB_LISTING }]);
         },
       });
     },
@@ -215,4 +220,4 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: Profes
 
       await pushDataWithMetadata(entries, ctx);
     },
-  } satisfies Record<keyof typeof routeLabels, RouteHandler<Ctx>>);
+  } satisfies Record<RouteLabel, RouteHandler<Ctx>>);

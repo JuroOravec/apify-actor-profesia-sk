@@ -1,7 +1,27 @@
-export type WorkFromHomeType = 'fullRemote' | 'partialRemote' | 'noRemote';
-export type SalaryPeriod = 'month' | 'hour';
-export type EmploymentType = 'fte' | 'pte' | 'selfemploy' | 'voluntary' | 'internship';
-export type DatasetType = 'jobOffers' | 'industries' | 'positions' | 'companies' | 'languages' | 'locations' | 'partners'; // prettier-ignore
+import { fromPairs } from 'lodash';
+
+import type { ArrVal } from './utils/types';
+
+const enumFromArray = <T extends readonly any[]>(arr: T) => {
+  return fromPairs(arr.map((k) => [k, k])) as { [Key in ArrVal<T>]: Key };
+};
+
+export const SALARY_PERIOD = ['month', 'hour'] as const;
+export const SALARY_PERIOD_ENUM = enumFromArray(SALARY_PERIOD);
+export type SalaryPeriod = ArrVal<typeof SALARY_PERIOD>;
+
+export const WORK_FROM_HOME_TYPE = ['fullRemote', 'partialRemote', 'noRemote'] as const; // prettier-ignore
+export type WorkFromHomeType = ArrVal<typeof WORK_FROM_HOME_TYPE>;
+
+export const EMPLOYMENT_TYPE = ['fte', 'pte', 'selfemploy', 'voluntary', 'internship'] as const; // prettier-ignore
+export type EmploymentType = ArrVal<typeof EMPLOYMENT_TYPE>;
+
+export const DATASET_TYPE = ['jobOffers', 'industries', 'positions', 'companies', 'languages', 'locations', 'partners'] as const; // prettier-ignore
+export type DatasetType = ArrVal<typeof DATASET_TYPE>;
+
+export const ROUTE_LABELS = ['JOB_LISTING', 'JOB_DETAIL', 'JOB_RELATED_LIST', 'PARTNERS'] as const;
+export const ROUTE_LABEL_ENUM = enumFromArray(ROUTE_LABELS);
+export type RouteLabel = ArrVal<typeof ROUTE_LABELS>;
 
 /** Shape of the data passed to the actor from Apify */
 export interface ProfesiaSkActorInput {

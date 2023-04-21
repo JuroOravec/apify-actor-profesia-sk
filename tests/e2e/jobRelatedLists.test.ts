@@ -2,9 +2,9 @@ import { describe, it, vi, beforeEach, expect } from 'vitest';
 import Joi from 'joi';
 import { runActorTest } from 'apify-actor-utils';
 
-import { routeLabels } from '../../src/constants';
 import { genericEntryValidation, locationEntryValidation } from '../utils/assert';
 import { run } from '../../src/actor';
+import { ROUTE_LABEL_ENUM } from '../../src/types';
 
 const log = (...args) => console.log(...args);
 const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
@@ -19,7 +19,7 @@ const jobRelatedLists = [
 ];
 
 describe(
-  routeLabels.JOB_RELATED_LIST,
+  ROUTE_LABEL_ENUM.JOB_RELATED_LIST,
   () => {
     beforeEach(() => {
       vi.resetAllMocks();

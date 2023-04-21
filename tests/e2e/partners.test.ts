@@ -2,15 +2,15 @@ import { describe, it, vi, beforeEach, expect } from 'vitest';
 import Joi from 'joi';
 import { runActorTest } from 'apify-actor-utils';
 
-import { routeLabels } from '../../src/constants';
 import { partnerEntryValidation } from '../utils/assert';
 import { run } from '../../src/actor';
+import { ROUTE_LABEL_ENUM } from '../../src/types';
 
 const log = (...args) => console.log(...args);
 const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
 describe(
-  routeLabels.PARTNERS,
+  ROUTE_LABEL_ENUM.PARTNERS,
   () => {
     beforeEach(() => {
       vi.resetAllMocks();

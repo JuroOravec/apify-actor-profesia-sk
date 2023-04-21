@@ -1,13 +1,14 @@
 import Joi from 'joi';
+import type { ActorEntryMetadata, WithActorEntryMetadata } from 'apify-actor-utils';
 
-import type { ActorEntryMetadata, WithActorEntryMetadata } from '../../src/utils/actor';
-import type {
+import {
   DetailedProfesiaSKJobOfferItem,
+  EMPLOYMENT_TYPE,
   JobOfferCategoryItem,
   SimpleProfesiaSKJobOfferItem,
 } from '../../src/types';
-import { GenericListEntry } from '../../src/pageActions/jobRelatedLists';
-import { PartnerEntry } from '../../src/pageActions/partners';
+import type { GenericListEntry } from '../../src/pageActions/jobRelatedLists';
+import type { PartnerEntry } from '../../src/pageActions/partners';
 
 ////////////////////////
 // Numbers
@@ -88,7 +89,7 @@ const jobOfferCategoryValidation = Joi.object<JobOfferCategoryItem>({
   name: joiStrNotEmptyNullable,
 });
 
-export const joiEmploymentType = joiStrNotEmpty.allow('fte', 'pte', 'selfemploy', 'voluntary', 'internship'); // prettier-ignore
+export const joiEmploymentType = joiStrNotEmpty.valid(...EMPLOYMENT_TYPE); // prettier-ignore
 export const detailedJobOfferValidation = simpleJobOfferValidation.keys({
   employmentTypes: Joi.array().min(1).items(joiEmploymentType),
   startDate: joiStrNotEmpty,
