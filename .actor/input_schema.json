@@ -165,6 +165,7 @@
       "type": "integer",
       "description": "Indicates how many times the request is retried if BasicCrawlerOptions.requestHandler fails.",
       "example": 3,
+      "prefill": 3,
       "minimum": 0,
       "nullable": true,
       "sectionCaption": "Crawler configuration (Advanced)",
@@ -175,6 +176,7 @@
       "type": "integer",
       "description": "The maximum number of requests per minute the crawler should run. We can pass any positive, non-zero integer.",
       "example": 120,
+      "prefill": 120,
       "minimum": 1,
       "nullable": true
     },
@@ -191,6 +193,7 @@
       "type": "integer",
       "description": "Sets the minimum concurrency (parallelism) for the crawl. WARNING: If we set this value too high with respect to the available system memory and CPU, our crawler will run extremely slow or crash. If not sure, it's better to keep the default value and the concurrency will scale up automatically.",
       "example": 3,
+      "prefill": 1,
       "minimum": 1,
       "nullable": true
     },
@@ -215,6 +218,7 @@
       "type": "integer",
       "description": "Timeout in which the function passed as BasicCrawlerOptions.requestHandler needs to finish, in seconds.",
       "example": 60,
+      "prefill": 180,
       "minimum": 0,
       "nullable": true
     },
