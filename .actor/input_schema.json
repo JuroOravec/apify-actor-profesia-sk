@@ -67,7 +67,7 @@
       "title": "Min salary",
       "type": "integer",
       "description": "If set, only entries offering this much or more will be extracted",
-      "example": 10,
+      "example": 1000,
       "minimum": 1,
       "nullable": true
     },
@@ -141,7 +141,7 @@
       "title": "Max number of results",
       "type": "integer",
       "description": "If set, only up to this number of entries will be extracted. The actual number of entries might be higher than this due to multiple pages being scraped at the same time.",
-      "example": 10,
+      "example": 100,
       "minimum": 1,
       "nullable": true
     },
@@ -179,7 +179,6 @@
       "title": "maxRequestsPerCrawl",
       "type": "integer",
       "description": "Maximum number of pages that the crawler will open. The crawl will stop when this limit is reached. <br/><br/> <strong>NOTE:</strong> In cases of parallel crawling, the actual number of pages visited might be slightly higher than this value.",
-      "example": 120,
       "minimum": 1,
       "nullable": true
     },
@@ -187,7 +186,7 @@
       "title": "minConcurrency",
       "type": "integer",
       "description": "Sets the minimum concurrency (parallelism) for the crawl.<br/><br/><strong>WARNING:</strong> If we set this value too high with respect to the available system memory and CPU, our crawler will run extremely slow or crash. If not sure, it's better to keep the default value and the concurrency will scale up automatically.",
-      "example": 3,
+      "example": 1,
       "prefill": 1,
       "minimum": 1,
       "nullable": true
@@ -196,7 +195,6 @@
       "title": "maxConcurrency",
       "type": "integer",
       "description": "Sets the maximum concurrency (parallelism) for the crawl.",
-      "example": 3,
       "minimum": 1,
       "nullable": true
     },
@@ -204,7 +202,6 @@
       "title": "navigationTimeoutSecs",
       "type": "integer",
       "description": "Timeout in which the HTTP request to the resource needs to finish, given in seconds.",
-      "example": 60,
       "minimum": 0,
       "nullable": true
     },
@@ -212,7 +209,7 @@
       "title": "requestHandlerTimeoutSecs",
       "type": "integer",
       "description": "Timeout in which the function passed as <a href=\"https://crawlee.dev/api/basic-crawler/interface/BasicCrawlerOptions#requestHandler\">BasicCrawlerOptions.requestHandler</a> needs to finish, in seconds.",
-      "example": 60,
+      "example": 180,
       "prefill": 180,
       "minimum": 0,
       "nullable": true
