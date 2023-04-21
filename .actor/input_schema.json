@@ -1,6 +1,6 @@
 {
   "title": "Profesia.sk Scraper",
-  "description": "Configure the Profesia.sk Scraper.<br/><br/>NOTE: Either <strong>Dataset type</strong> or <strong>Start URLs</strong> must be given.",
+  "description": "Configure the Profesia.sk Scraper.<br/><br/><strong>NOTE:</strong> Either <strong>Dataset type</strong> or <strong>Start URLs</strong> must be given.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
@@ -35,12 +35,7 @@
     "startUrls": {
       "title": "Start URLs",
       "type": "array",
-      "description": "Select specific URLs to scrape. This option takes precedence over <strong>Dataset type<strong>.<br/><br/>- If the URL is a listing page or a company page, all entries of that list are extracted.<br/>- If the URL is a job offer page, only that page is extracted<br/>- If the URL corresponds to other <strong>Dataset type</strong> (e.g. list of partners), this kind of dataset is extracted.",
-      "prefill": [
-        {
-          "url": "https://www.profesia.sk/praca"
-        }
-      ],
+      "description": "Select specific URLs to scrape. This option takes precedence over <strong>Dataset type</strong>.<br/><br/>- If the URL is a listing page or a company page, all entries of that list are extracted.<br/>- If the URL is a job offer page, only that page is extracted<br/>- If the URL corresponds to other <strong>Dataset type</strong> (e.g. list of partners), this kind of dataset is extracted.",
       "editor": "requestListSources"
     },
     "proxy": {
@@ -57,7 +52,7 @@
       "example": true,
       "default": true,
       "sectionCaption": "Job Offer Filters",
-      "sectionDescription": "These filters are applied <strong>ONLY</strong> when <strong>Dataset type</strong> is set to <strong>Job offers</strong>",
+      "sectionDescription": "These filters are applied <strong>ONLY</strong> when scraping a job offer listing",
       "nullable": true
     },
     "jobOfferFilterQuery": {
@@ -66,14 +61,6 @@
       "description": "If given, only entries matching the query will be retrieved (full-text search)",
       "example": "specialist",
       "editor": "textfield",
-      "nullable": true
-    },
-    "jobOfferFilterMaxCount": {
-      "title": "Max number of results",
-      "type": "integer",
-      "description": "If set, only up to this number of entries will be extracted. The actual number of entries might be higher than this due to multiple pages being scraped at the same time.",
-      "example": 10,
-      "minimum": 1,
       "nullable": true
     },
     "jobOfferFilterMinSalaryValue": {
@@ -145,9 +132,17 @@
     "jobOfferFilterLastNDays": {
       "title": "Last N days",
       "type": "integer",
-      "description": "If set, only entries this much days old will be extracted. E.g. 7 = 1 week old, 31 = 1 month old, ...",
+      "description": "If set, only entries up to this much days old will be extracted. E.g. 7 = max 1 week old, 31 = max 1 month old, ...",
       "example": 10,
       "minimum": 0,
+      "nullable": true
+    },
+    "jobOfferFilterMaxCount": {
+      "title": "Max number of results",
+      "type": "integer",
+      "description": "If set, only up to this number of entries will be extracted. The actual number of entries might be higher than this due to multiple pages being scraped at the same time.",
+      "example": 10,
+      "minimum": 1,
       "nullable": true
     },
     "jobOfferCountOnly": {
@@ -183,7 +178,7 @@
     "maxRequestsPerCrawl": {
       "title": "maxRequestsPerCrawl",
       "type": "integer",
-      "description": "Maximum number of pages that the crawler will open. The crawl will stop when this limit is reached. <br/><br/> NOTE: In cases of parallel crawling, the actual number of pages visited might be slightly higher than this value.",
+      "description": "Maximum number of pages that the crawler will open. The crawl will stop when this limit is reached. <br/><br/> <strong>NOTE:</strong> In cases of parallel crawling, the actual number of pages visited might be slightly higher than this value.",
       "example": 120,
       "minimum": 1,
       "nullable": true
@@ -191,7 +186,7 @@
     "minConcurrency": {
       "title": "minConcurrency",
       "type": "integer",
-      "description": "Sets the minimum concurrency (parallelism) for the crawl.<br/><br/>WARNING: If we set this value too high with respect to the available system memory and CPU, our crawler will run extremely slow or crash. If not sure, it's better to keep the default value and the concurrency will scale up automatically.",
+      "description": "Sets the minimum concurrency (parallelism) for the crawl.<br/><br/><strong>WARNING:</strong> If we set this value too high with respect to the available system memory and CPU, our crawler will run extremely slow or crash. If not sure, it's better to keep the default value and the concurrency will scale up automatically.",
       "example": 3,
       "prefill": 1,
       "minimum": 1,
