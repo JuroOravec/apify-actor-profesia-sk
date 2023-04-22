@@ -63,10 +63,27 @@ For details and examples for all input fields, please visit the [Input tab](http
 
 ### Job offers
 
-&nbsp; | 1000 results | Full run (~21k) results
--|-|-
-Fast run | $0.023 in 52s | $0.482 in 18m 12s
-Detailed run | $0.042 in 1m 44s | $0.870 in 36m 30s
+<table>
+  <thead>
+    <tr>
+      <td></td>
+      <td><strong>1000 results</strong></td>
+      <td><strong>Full run (~21k) results</strong></td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Fast run</td>
+      <td>$0.023 in 52s</td>
+      <td>$0.482 in 18m 12s</td>
+    </tr>
+    <tr>
+      <td>Detailed run</td>
+      <td>$0.042 in 1m 44s</td>
+      <td>$0.870 in 36m 30s</td>
+    </tr>
+  </tbody>
+</table>
 
 Checking for new job offers every day => less than $1 per month ($0.713 = 31 * $0.023).
 
