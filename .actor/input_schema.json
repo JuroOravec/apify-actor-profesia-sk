@@ -138,7 +138,7 @@
       "nullable": true
     },
     "jobOfferFilterMaxCount": {
-      "title": "Max number of results",
+      "title": "Target number of results",
       "type": "integer",
       "description": "If set, only up to this number of entries will be extracted. The actual number of entries might be higher than this due to multiple pages being scraped at the same time.",
       "example": 100,
