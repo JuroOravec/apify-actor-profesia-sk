@@ -16,8 +16,6 @@ import { createHandlers, errorCaptureHandlerWrapper, routes } from './router';
 import { datasetTypeToUrl } from './constants';
 import { pickDefaultInputFields, validateInput } from './validation';
 
-setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
-
 // Flow:
 // 1 Jobs (https://www.profesia.sk/praca/)
 //   1.0 Filter (applies to all cases)
@@ -78,6 +76,8 @@ setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
 //   - https://podpora.profesia.sk/897202-Export-pracovn%C3%BDch-pon%C3%BAk
 
 export const run = async (crawlerConfig?: CheerioCrawlerOptions): Promise<void> => {
+  setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
+
   // See docs:
   // - https://docs.apify.com/sdk/js/
   // - https://docs.apify.com/academy/deploying-your-code/inputs-outputs#accepting-input-with-the-apify-sdk

@@ -68,5 +68,5 @@ describe(
       });
     });
   },
-  { timeout: 20_000 }
+  { timeout: 5_000 }
 );
