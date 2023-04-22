@@ -85,7 +85,8 @@ For details and examples for all input fields, please visit the [Input tab](http
   </tbody>
 </table>
 
-Checking for new job offers every day => less than $1 per month ($0.713 = 31 * $0.023).
+<br/>
+Checking for new job offers every day => costs less than $1 per month ($0.713 = 31 * $0.023).
 
 Remember that with the [Apify Free plan](https://apify.com/pricing) you have $5 free usage per month.
 
