@@ -147,7 +147,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: Profes
         // If "detailed" option, also fetch and process the job detail page for each entry
         log.info(`Fetching details page of ${entries.length} entries`);
 
-        const detailedEntries = await serialAsyncMap(entries, async (entry) => {
+        await serialAsyncMap(entries, async (entry) => {
           if (!entry.offerUrl) {
             log.info(`Skipping fetching details page - URL is missing (ID: ${entry.offerId})`);
             return;
@@ -161,10 +161,11 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: Profes
           const domLib = cheerioDOMLib(cheerioDom, entry.offerUrl);
           const jobDetail = jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: entry }); // prettier-ignore
 
-          await wait(100);
+          // Push the data after each scraped page to limit the chance of losing data
+          await Promise.all([pushDataWithMetadata(jobDetail, ctx), wait(100)]);
+
           return jobDetail;
         });
-        await pushDataWithMetadata(detailedEntries, ctx);
       };
 
       const domLib = cheerioDOMLib(ctx.$, request.loadedUrl || request.url);
