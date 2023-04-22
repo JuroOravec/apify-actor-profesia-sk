@@ -36,7 +36,7 @@ The data can be downloaded in JSON, JSONL, XML, CSV, Excel, or HTML formats.
 - **Error handling**
   - Errors are captured and surfaced in the `REPORTING` dataset. (See Storage > Dataset > Select dropdown)
 
-## How can you use scraped Profesia.sk data? (Examples)
+## How can you use the data scraped from Profesia.sk? (Examples)
 
 Companies
   - Analyse competitors' job offers and recruitment strategies.
@@ -85,6 +85,7 @@ For details and examples for all input fields, please visit the [Input tab](http
   </tbody>
 </table>
 
+<br/>
 <br/>
 Checking for new job offers every day => costs less than $1 per month ($0.713 = 31 * $0.023).
 
