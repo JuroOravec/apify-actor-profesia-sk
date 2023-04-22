@@ -121,7 +121,7 @@ export const jobListingDOMActions = {
     const url = domLib.url();
     
     // Find and extract data
-    const entries = domLib.findMany(rootEl, '.list-row:not(.native-agent)', (el) => {
+    const entries = domLib.findMany(rootEl, '.list-row:not(.native-agent):not(.reach-list)', (el) => {
       const employerName = domLib.findOne(el, '.employer', (el) => domLib.text(el));
       const employerUrl = domLib.findOne(el, '.offer-company-logo-link', (el) => domLib.href(el, { baseUrl: url })); // prettier-ignore
       const employerLogoUrl = domLib.findOne(el, '.offer-company-logo-link img', (el) => domLib.src(el, { baseUrl: url })); // prettier-ignore
