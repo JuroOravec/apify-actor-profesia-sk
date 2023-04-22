@@ -3,7 +3,7 @@
     "name": "profesia-sk-scraper",
     "title": "Profesia.sk Scraper",
     "description": "One-stop-shop for all data on Profesia.sk. Extract job offers, list of companies, professions, locations... Job offers include salary, textual info, company, and more.",
-    "version": "0.2",
+    "version": "1.0",
     "dockerfile": "./Dockerfile",
     "meta": {
         "templateId": "ts-crawlee-playwright-chrome"
