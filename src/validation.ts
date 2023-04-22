@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { pick } from 'lodash';
 
 import {
   DATASET_TYPE,
@@ -64,3 +65,19 @@ export const validateInput = (input: ProfesiaSkActorInput | null) => {
     throw Error(`Invalid value for datasetType option. Got ${input.datasetType}, but allowed values are ${JSON.stringify(Object.keys(datasetTypeToUrl))} `); // prettier-ignore
   }
 };
+
+export const pickDefaultInputFields = <T extends DefaultActorInput>(config: T) =>
+  pick(config, [
+    'navigationTimeoutSecs',
+    'ignoreSslErrors',
+    'additionalMimeTypes',
+    'suggestResponseEncoding',
+    'forceResponseEncoding',
+    'requestHandlerTimeoutSecs',
+    'maxRequestRetries',
+    'maxRequestsPerCrawl',
+    'maxRequestsPerMinute',
+    'minConcurrency',
+    'maxConcurrency',
+    'keepAlive',
+  ]);

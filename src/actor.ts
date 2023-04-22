@@ -14,7 +14,7 @@ import { stats } from './lib/stats';
 import { setupSentry } from './lib/sentry';
 import { createHandlers, errorCaptureHandlerWrapper, routes } from './router';
 import { datasetTypeToUrl } from './constants';
-import { validateInput } from './validation';
+import { pickDefaultInputFields, validateInput } from './validation';
 
 setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
 
@@ -131,7 +131,7 @@ const createCrawler = async ({ router, input, crawlerConfig }: {
     // sessionPoolOptions: {},
 
     // ----- 2. CONFIG FROM INPUT -----
-    ...omitBy(input ?? {}, (field) => field === undefined),
+    ...omitBy(pickDefaultInputFields(input ?? {}), (field) => field === undefined),
     
     // ----- 3. CONFIG THAT USER CANNOT CHANGE -----
     proxyConfiguration,
