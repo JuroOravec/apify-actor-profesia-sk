@@ -40,7 +40,7 @@ setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
 //
 //     - Mention that by using custom URLs, they can filter by:
 //       - By geo area(s) (eg https://www.profesia.sk/praca/zoznam-lokalit/, https://www.profesia.sk/praca/okres-galanta/)
-//       - By position(s) (eg https://www.profesia.sk/praca/zoznam-pozicii/, https://www.profesia.sk/praca/account-manager/)
+//       - By profession(s) (eg https://www.profesia.sk/praca/zoznam-pozicii/, https://www.profesia.sk/praca/account-manager/)
 //       - By industry(ies) (eg https://www.profesia.sk/praca/zoznam-pracovnych-oblasti/, https://www.profesia.sk/praca/pomocne-prace/)
 //       - By language requirement(s) (eg https://www.profesia.sk/praca/zoznam-jazykovych-znalosti/)
 //       - By employer(s) (eg https://www.profesia.sk/praca/zoznam-spolocnosti, https://www.profesia.sk/praca/22media/C237397)
@@ -52,7 +52,7 @@ setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
 // 2 List of Industries (https://www.profesia.sk/praca/zoznam-pracovnych-oblasti/)
 //   - no options there, just return name, link, count
 //
-// 3 List of Positions (https://www.profesia.sk/praca/zoznam-pozicii/)
+// 3 List of Professions (https://www.profesia.sk/praca/zoznam-pozicii/)
 //   - no options there, just return name, link, count
 //
 // 4 List of Languages (https://www.profesia.sk/praca/zoznam-jazykovych-znalosti/)

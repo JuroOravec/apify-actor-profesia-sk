@@ -15,7 +15,7 @@
       "enum": [
         "jobOffers",
         "industies",
-        "positions",
+        "professions",
         "companies",
         "locations",
         "languages",
@@ -24,7 +24,7 @@
       "enumTitles": [
         "Job offers",
         "Industries",
-        "Positions",
+        "Professions",
         "Companies",
         "Locations",
         "Languages",

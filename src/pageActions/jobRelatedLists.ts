@@ -44,7 +44,7 @@ export const jobRelatedListsPageActions = {
    * Extract following kind of links from:
    * - companies - https://www.profesia.sk/praca/zoznam-spolocnosti/
    * - industries - https://www.profesia.sk/praca/zoznam-pracovnych-oblasti/
-   * - positions - https://www.profesia.sk/praca/zoznam-pozicii/
+   * - professions - https://www.profesia.sk/praca/zoznam-pozicii/
    * - language requirements - https://www.profesia.sk/praca/zoznam-jazykovych-znalosti/
    */
   extractGenericLinks: async <T>(options: ExtractEntriesOptions<GenericListEntry, T>) => {

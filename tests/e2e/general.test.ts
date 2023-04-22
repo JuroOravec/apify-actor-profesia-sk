@@ -19,7 +19,7 @@ const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 const testCases: { datasetType: DatasetType; expectedUrl: string; schema: Joi.ObjectSchema; numOfPushDataCalls: number; numOfAssertCalls: number }[] = [
   { datasetType: 'companies', expectedUrl: datasetTypeToUrl.companies, schema: genericEntryValidation, numOfPushDataCalls: 2, numOfAssertCalls: 3 },
   { datasetType: 'industries', expectedUrl: datasetTypeToUrl.industries, schema: genericEntryValidation, numOfPushDataCalls: 1, numOfAssertCalls: 2 },
-  { datasetType: 'positions', expectedUrl: datasetTypeToUrl.positions, schema: genericEntryValidation, numOfPushDataCalls: 1, numOfAssertCalls: 2 },
+  { datasetType: 'professions', expectedUrl: datasetTypeToUrl.professions, schema: genericEntryValidation, numOfPushDataCalls: 1, numOfAssertCalls: 2 },
   { datasetType: 'languages', expectedUrl: datasetTypeToUrl.languages, schema: genericEntryValidation, numOfPushDataCalls: 1, numOfAssertCalls: 2 },
   { datasetType: 'locations', expectedUrl: datasetTypeToUrl.locations, schema: locationEntryValidation, numOfPushDataCalls: 2, numOfAssertCalls: 3 },
   { datasetType: 'partners', expectedUrl: datasetTypeToUrl.partners, schema: partnerEntryValidation, numOfPushDataCalls: 2, numOfAssertCalls: 2 },

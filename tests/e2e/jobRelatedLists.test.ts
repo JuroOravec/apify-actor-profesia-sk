@@ -12,7 +12,7 @@ const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 // prettier-ignore
 const jobRelatedLists = [
   { name: 'industries', url: 'https://www.profesia.sk/praca/zoznam-pracovnych-oblasti/', numOfAssertCalls: 1, schema: genericEntryValidation },
-  { name: 'positions', url: 'https://www.profesia.sk/praca/zoznam-pozicii/', numOfAssertCalls: 1, schema: genericEntryValidation  },
+  { name: 'professions', url: 'https://www.profesia.sk/praca/zoznam-pozicii/', numOfAssertCalls: 1, schema: genericEntryValidation  },
   { name: 'languages', url: 'https://www.profesia.sk/praca/zoznam-jazykovych-znalosti/', numOfAssertCalls: 1, schema: genericEntryValidation  },
   { name: 'companies', url: 'https://www.profesia.sk/praca/zoznam-spolocnosti/', numOfAssertCalls: 2, schema: genericEntryValidation  },
   { name: 'locations', url: 'https://www.profesia.sk/praca/zoznam-lokalit/', numOfAssertCalls: 2, schema: locationEntryValidation  },

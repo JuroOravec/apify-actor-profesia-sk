@@ -97,7 +97,7 @@ export const detailedJobOfferValidation = simpleJobOfferValidation.keys({
   datePosted: Joi.date().iso(),
 
   locationCategs: Joi.array().items(jobOfferCategoryValidation),
-  positionCategs: Joi.array().items(jobOfferCategoryValidation),
+  professionCategs: Joi.array().items(jobOfferCategoryValidation),
 
   jobInfoResponsibilities: joiStrNotEmptyNullable,
   jobInfoBenefits: joiStrNotEmptyNullable,

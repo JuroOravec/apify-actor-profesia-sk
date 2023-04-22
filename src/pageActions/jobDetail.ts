@@ -177,7 +177,7 @@ export const jobDetailDOMActions = {
     const baseUrl = domLib.url();
 
     const locationCategs: JobOfferCategoryItem[] = [];
-    const positionCategs: JobOfferCategoryItem[] = [];
+    const professionCategs: JobOfferCategoryItem[] = [];
 
     let currHeading: string | null;
     // prettier-ignore
@@ -194,14 +194,14 @@ export const jobDetailDOMActions = {
         });
       }
       if (nodeName === 'A' && currHeading?.includes('pozícia')) {
-        positionCategs.push({
+        professionCategs.push({
           url: domLib.href(el, { baseUrl }),
           name: domLib.text(el),
         });
       }
     });
 
-    return { locationCategs, positionCategs };
+    return { locationCategs, professionCategs };
   },
 };
 
