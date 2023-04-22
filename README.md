@@ -100,7 +100,7 @@ For details and examples for all input fields, please visit the [Input tab](http
 
 ### Filter options
 
-You can run Profesia.sk Scraper as is, with the default options. This will get you the full list of all job offers (detailed version).
+You can run Profesia.sk Scraper as is, with the default options, to get a sample of the job offers (detailed version).
 
 Otherwise, you can set these filters:
 
