@@ -271,14 +271,11 @@ export const jobListingMethods = {
     }
 
     // Check if we've reached the limit for max entries
-    const isLimitReached =
-      itemsCount != null
-        ? // Use count of items already in dataset to check if limit reached
-          itemsCount + entries.length >= jobOfferFilterMaxCount
-        : listingPageNum != null
-        ? // Use page offset to check if limit reached (20 entries per page)
-          listingPageNum * 20 >= jobOfferFilterMaxCount
-        : false;
+    let isLimitReached = false;
+    // Use count of items already in dataset to check if limit reached
+    if (!isLimitReached && itemsCount != null && itemsCount + entries.length >= jobOfferFilterMaxCount) isLimitReached = true; // prettier-ignore
+    // Use page offset to check if limit reached (20 entries per page)
+    if (!isLimitReached && listingPageNum != null && listingPageNum * 20 >= jobOfferFilterMaxCount) isLimitReached = true; // prettier-ignore
 
     // If limit reached, shorten the array as needed
     const adjustedEntries = !isLimitReached
