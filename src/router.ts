@@ -169,14 +169,18 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: Profes
       };
 
       const domLib = cheerioDOMLib(ctx.$, request.loadedUrl || request.url);
+      const listingPageNum = request.userData?.listingPageNum || 1;
       await jobListingPageActions.extractJobOffers({
         domLib,
         log,
         input,
+        listingPageNum,
         onFetchHTML: (opts) => ctx.sendRequest(opts).then((d) => d.body),
         onData,
         onScheduleNextPage: async (url) => {
-          await ctx.crawler.addRequests([{ url, label: ROUTE_LABEL_ENUM.JOB_LISTING }]);
+          await ctx.crawler.addRequests([
+            { url, label: ROUTE_LABEL_ENUM.JOB_LISTING, userData: { listingPageNum: listingPageNum + 1 } }, // prettier-ignore
+          ]);
         },
       });
     },

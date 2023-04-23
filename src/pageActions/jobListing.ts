@@ -26,6 +26,7 @@ interface ExtractJobOffersOptions<TEl> {
   domLib: DOMLib<TEl>;
   log: Log;
   input: ProfesiaSkActorInput;
+  listingPageNum?: number | null;
   onFetchHTML: (overrideOptions?: Partial<OptionsInit>) => Promise<string>;
   onData: (data: SimpleProfesiaSKJobOfferItem[]) => MaybePromise<void>;
   onScheduleNextPage: (url: string) => MaybePromise<void>;
@@ -52,7 +53,7 @@ const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string
 
 export const jobListingPageActions = {
   // prettier-ignore
-  extractJobOffers: async <T>({ domLib: origDomLib, log, onScheduleNextPage, input, onFetchHTML, onData }: ExtractJobOffersOptions<T>) => {
+  extractJobOffers: async <T>({ domLib: origDomLib, log, listingPageNum = null, onScheduleNextPage, input, onFetchHTML, onData }: ExtractJobOffersOptions<T>) => {
     const { jobOfferCountOnly } = input;
     const origUrl = origDomLib.url();
 
@@ -93,7 +94,7 @@ export const jobListingPageActions = {
       log.warning('Failed to get count of entries in dataset (AKA already collected entries). We currently use this info to know how many items were scraped. This scraper might scrape more entries than was set.'); // prettier-ignore
     }
 
-    const { entries, isLimitReached } = jobListingMethods.shortenEntriesToMaxLen({ entries: unadjustedEntries, input, itemsCount: itemCountBefore }); // prettier-ignore
+    const { entries, isLimitReached } = jobListingMethods.shortenEntriesToMaxLen({ entries: unadjustedEntries, input, itemsCount: itemCountBefore, listingPageNum }); // prettier-ignore
 
     // Schedule the next page.
     // NOTE: We do this BEFORE the onData callback, so the new page can be scraped in parallel
@@ -256,19 +257,28 @@ export const jobListingMethods = {
     input,
     entries,
     itemsCount,
+    listingPageNum,
   }: {
     input: ProfesiaSkActorInput;
     entries: SimpleProfesiaSKJobOfferItem[];
     itemsCount: number | null;
+    listingPageNum: number | null;
   }) => {
-    if (!itemsCount) {
+    const { jobOfferFilterMaxCount } = input;
+
+    if ((itemsCount == null && listingPageNum == null) || jobOfferFilterMaxCount == null) {
       return { entries, isLimitReached: false };
     }
 
-    const { jobOfferFilterMaxCount } = input;
     // Check if we've reached the limit for max entries
     const isLimitReached =
-      jobOfferFilterMaxCount != null && itemsCount + entries.length >= jobOfferFilterMaxCount;
+      itemsCount != null
+        ? // Use count of items already in dataset to check if limit reached
+          itemsCount + entries.length >= jobOfferFilterMaxCount
+        : listingPageNum != null
+        ? // Use page offset to check if limit reached (20 entries per page)
+          listingPageNum * 20 >= jobOfferFilterMaxCount
+        : false;
 
     // If limit reached, shorten the array as needed
     const adjustedEntries = !isLimitReached
