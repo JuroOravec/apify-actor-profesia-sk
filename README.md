@@ -57,7 +57,7 @@ Analysists
 4. Click "Start" and wait for the data to be extracted.
 5. Download your data in JSON, JSONL, XML, CSV, Excel, or HTML format.
 
-For details and examples for all input fields, please visit the [Input tab](https://apify.com/jurooravec/apify-store-scraper/input-schema).
+For details and examples for all input fields, please visit the [Input tab](https://apify.com/jurooravec/profesia-sk-scraper/input-schema).
 
 ## How much does it cost to scrape Profesia.sk?
 
@@ -97,7 +97,7 @@ List of companies, professions, locations, industries, partners, etc, are all ar
 
 ## Input options
 
-For details and examples for all input fields, please visit the [Input tab](https://apify.com/jurooravec/apify-store-scraper/input-schema).
+For details and examples for all input fields, please visit the [Input tab](https://apify.com/jurooravec/profesia-sk-scraper/input-schema).
 
 ### Filter options
 
@@ -303,7 +303,7 @@ The Apify API gives you programmatic access to the Apify platform. The API is or
 
 To access the API using Node.js, use the `apify-client` NPM package. To access the API using Python, use the `apify-client` PyPI package.
 
-Check out the [Apify API reference](https://docs.apify.com/api/v2) docs for full details or click on the [API tab](https://apify.com/jurooravec/apify-store-scraper/api) for code examples.
+Check out the [Apify API reference](https://docs.apify.com/api/v2) docs for full details or click on the [API tab](https://apify.com/jurooravec/profesia-sk-scraper/api) for code examples.
 
 ## Is it legal to scrape Profesia.sk?
 It is legal to scrape publicly available data such as product descriptions, prices, or ratings. Read Apify's blog post on [the legality of web scraping](https://blog.apify.com/is-web-scraping-legal/) to learn more.
