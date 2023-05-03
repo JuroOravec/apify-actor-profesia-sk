@@ -14,7 +14,7 @@
       "prefill": "jobOffers",
       "enum": [
         "jobOffers",
-        "industies",
+        "industries",
         "professions",
         "companies",
         "locations",
