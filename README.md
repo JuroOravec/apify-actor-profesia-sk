@@ -1,312 +1,115 @@
-Profesia.sk Scraper
+# Profesia.sk Scraper
+
 ===============================
 
-One-stop-shop for all data on Profesia.sk. Extract job offers, list of companies, professions, locations... Job offers include salary, textual info, company, and more.
+Apify actor scraper for profesia.sk
 
-## What is Profesia.sk Scraper and how does it work?
+For more info see:
 
-With Profesia.sk Scraper, you can extract:
-- [Job offers](https://profesia.sk/praca)
-- [List of companies that have job offers](https://www.profesia.sk/praca/zoznam-spolocnosti)
-- [List of industries that have job offers](https://www.profesia.sk/praca/zoznam-pracovnych-oblasti)
-- [List of locations that have job offers](https://www.profesia.sk/praca/zoznam-lokalit)
-- [List of professions](https://www.profesia.sk/praca/zoznam-pozicii)
-- [List of advertised language requirements](https://www.profesia.sk/praca/zoznam-pozicii)
-- [List of partners of profesia.sk](https://profesia.sk/partneri)
+- <https://apify.com/jurooravec/profesia-sk-scraper>
+- <https://github.com/JuroOravec/apify-actor-utils>
+- <https://docs.apify.com/platform/actors/development>
 
-See [outputs section](#outputs) for detailed decription.
+## Checklist
 
-The data can be downloaded in JSON, JSONL, XML, CSV, Excel, or HTML formats.
+1. Dataset identification
 
-## Features
-- **7 kinds of datasets**
-  - Scrape details of job offers (or other datasets) or 6 other kinds of datasets.
-- **Fast vs Detailed modes**
-  - Job offer scraping can be either quick & simple (data taken from listing page only) or detailed (visit each job offer page)
-- **Full filter support**
-  - Filter the results by search terms, minimum salary, employment type, remote work status, or age of the job offer.
-  - Custom filters can be set up by providing URL to the job listing page with the filters applied.
-  - Limit the number of results
-- **Blazing fast**
-  - The actor doesn't use browser to extract the data, which means it's fast and cheap.
-- **Custom crawler configuration**
-  - For advanced needs, you can pass Crawler configuration via Input.
-- **Tested daily for highly reliability**
-  - The actor is regularly tested end-to-end to minimize the risk of a broken integration.
-- **Error handling**
-  - Errors are captured and surfaced in the `REPORTING` dataset. (See Storage > Dataset > Select dropdown)
+    - [ ] 1.1 Identify distinct types of web pages and the data of interest
+    - [ ] 1.2 Identify how to distinguish between the web pages, whether via URL, or page content
+    - [ ] 1.3 Define labels for these distinct types in `./router.ts`
+    - [ ] 1.4 Define default handler matchers based on these distinct types in `./router.ts`
+    - [ ] 1.5 Define these distinct types in `./router.ts`
+    - [ ] 1.6 Identify the fields / data of interest per each page.
+      - [ ] 1.6.1 Which fields are composite / will need post-processing? (e.g. more info packed up in single text)
+      - [ ] 1.6.2 Which fields are considered personally identifiable information (GDPR)?
+      - [ ] 1.6.3 For URLs, are they relative or absolute?
+    - [ ] 1.7 Check if there isn't additional data either in HTML or requests (usually Fetch/XHR)
 
-## How can you use the data scraped from Profesia.sk? (Examples)
+2. Entry extraction
 
-Companies
-  - Analyse competitors' job offers and recruitment strategies.
-  - Create competitive salary packages + perks based on the information like salary or remote options.
-  - Analyze the effectiveness of job advertisements and optimize their recruitment marketing strategies.
+    - [ ] 2.1 Check if you need browser / JS to make the data load
+    - [ ] 2.2. Check if you need to click / trigger anything to make the data load
+    - [ ] 2.3 Check if you need cookie session to make the data load
+    - [ ] 2.4 Check if you need to be logged in to make the data load
+    - [ ] 2.5 Check if the page differs if you visit it via incognito
+    - [ ] 2.6 Check if entries have distinct URL
 
-Recruiters
-  - Automate the process of finding job offers for your clients.
+3. Entry scheduling / Listing
 
-Analysists
-  - Analyze job market trends like salary expectations, popular job types, and in-demand skills.
-  - Study the regional job market trends.
+    - [ ] 2.0 How do I find the listing page(s), is it single or more pages? (remember how paperindex was structured)
+    - [ ] 2.1 Check if you need browser / JS to make the listing load
+    - [ ] 2.2 Check if you need to click / trigger anything to make the listing load
+    - [ ] 2.3 Check if you need cookie session to make the listing load
+    - [ ] 2.4 Check if you need to be logged in to make the listing load
+    - [ ] 2.5 Check if the page differs if you visit it via incognito
+    - [ ] 2.6 How do I find the total results count?
+    - [ ] 2.7 Check if there's upper limit on the listing results
+      - [ ] 2.7.1 If so, what strategies are available to get over the limit?
+    - [ ] 2.8 What filters are available?
+      - [ ] 2.8.1 Are the filters set via query params, post body, interaction with server, or other?
+      - [ ] 2.8.2 Identify the available / permitted values for each of filters?
+    - [ ] 2.9 Is there option to set items per page and / or current page?
+      - [ ] 2.9.1 If available, to how high value can I set items per page? Does it impact load time?
+    - [ ] 2.10 How do I reset the filter? Do I need to interact with the server (like in SKSCRIS?)
+    - [ ] 2.11 Is there other data on the entries that's on the listing page, but not on entry page?
+    - [ ] 2.12 Is the data on listing page sufficient for a "simple" version of the dataset?
+    - [ ] 2.13 Are there non-entry elements in the list? (E.g. inline ads) How do I exclude them?
+    - [ ] 2.14 How do I know if there are no results on the page?
+      - [ ] 2.14.1 In such case, how do I know whether it's the end of the pagination?
+    - [ ] 2.15 How do I identify the next page URL or action to load next page?
+    - [ ] 2.16 How do if I'm on last page of pagination?
 
-## How to use Profesia.sk Scraper
-1. Create a free Apify account using your email
-2. Open Profesia.sk Scraper
-3. In Input, select the dataset to scrape, filters to apply.
-4. Click "Start" and wait for the data to be extracted.
-5. Download your data in JSON, JSONL, XML, CSV, Excel, or HTML format.
+4. Communicate the findings to client, agree on scope
 
-For details and examples for all input fields, please visit the [Input tab](https://apify.com/jurooravec/profesia-sk-scraper/input-schema).
+5. Implement step 1.
+6. Implement step 2.
+7. Implement step 3.
 
-## How much does it cost to scrape Profesia.sk?
+8. Actor input options
+    - [ ] 8.1 Add input options to interface
+    - [ ] 8.2 Implement new actor inputs
+    - [ ] 8.3 Add the input options to actor config (`config.ts` or `actor.json`)
+    - [ ] 8.4 Update actor input validation in `validation.ts`
 
-### Job offers
+9. Types & tests
+    - [ ] 9.1 Write basic tests (e.g. the ones using `dataset` input) and make them pass without validation
+    - [ ] 9.2 Print the results and define types for the entries
+      - [ ] 9.2.1 Don't forget to update the entry types in rest of the code too
+    - [ ] 9.3 Write entry validation for tests and update the tests to use it
+    - [ ] 9.4 Write tests for each of the dataset types
 
-<table>
-  <thead>
-    <tr>
-      <td></td>
-      <td><strong>1000 results</strong></td>
-      <td><strong>Full run (~21k) results</strong></td>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Fast run</td>
-      <td>$0.023 in 52s</td>
-      <td>$0.482 in 18m 12s</td>
-    </tr>
-    <tr>
-      <td>Detailed run</td>
-      <td>$0.042 in 1m 44s</td>
-      <td>$0.870 in 36m 30s</td>
-    </tr>
-  </tbody>
-</table>
+10. Publish v0.1
+    - [ ] 10.1 Update the text/names in `actor.json` / `config.ts`
+    - [ ] 10.2 Update the text/names in `package.json`
+    - [ ] 10.3 Create new actor in Apify and give it a name
+    - [ ] 10.4 Set actor source to GitHub repo
+      - [ ] 10.4.1 Set source to SSH (git://) URI
+      - [ ] 10.4.2 Add Apify deploy key to GitHub repo
+      - [ ] 10.4.3 Set up GitHub build webhook - Copy the URL for API > Build actor, and set it to GitHub webhook
+      - [ ] 10.4.4 Trigger first build, and fix any build issues
+    - [ ] 10.5 Run actor and check results
 
-<br/>
-<br/>
-Checking for new job offers every day => costs less than $1 per month ($0.713 = 31 * $0.023).
+11. Publish v1.0
+    - [ ] 11.1 Check if all actor inputs are set up
+    - [ ] 11.2 Do a couple of runs, and see if any default options (e.g. for the crawler) don't need changing (like was in SKCRIS)
+      - [ ] 11.2.1 If needed, update the config
+    - [ ] 11.3 For each dataset type, do a couple of runs, and record the time and cost it takes to run a) some set of entries, e.g. 100 or 1000; b) full dataset
+      - [ ] 11.3.1 Update the tabular data in actor README.
+    - [ ] 11.4 Update README section how to use the dataset
+      - [ ] 11.4.1 Use ChatGPT to brainstorm and give you a list of 20+ suggestions (see results I got for SKCRIS)
+    - [ ] 11.5 Update README section features
+    - [ ] 11.6 Update README section inputs
+    - [ ] 11.7 Update README section outputs
+    - [ ] 11.8 Update README section privacy
+    - [ ] 11.9 Add a screenshot of the results page
+    - [ ] 11.10 Finally, publish the actor to store
 
-Remember that with the [Apify Free plan](https://apify.com/pricing) you have $5 free usage per month.
+12. Deliver the actor (or dataset) to client
 
-### Other datasets
+13. Monetize
+    - [ ] 12.1 Add/update the entry in spreadsheet, and get pricing suggestion based on the difficulty of implementation and value of the dataset.
+    - [ ] 12.2 After actor was published, request monetization via Intercom (monthly fee, 4 days trial, and price from 12.1)
+    - [ ] 12.3 Update the spreadsheet with final price
 
-List of companies, professions, locations, industries, partners, etc, are all around $0.038 (24s) per run.
-
-## Input options
-
-For details and examples for all input fields, please visit the [Input tab](https://apify.com/jurooravec/profesia-sk-scraper/input-schema).
-
-### Filter options
-
-You can run Profesia.sk Scraper as is, with the default options, to get a sample of the job offers (detailed version).
-
-Otherwise, you can set these filters:
-
-- Keyword(s) (full-text search)
-- Minimum salary (per month / per hour)
-- minimum salary (per month / per hour)
-- Employment type (full-time, part-time, freelance, internship, voluntary)
-- Remote status (remote, partial, on-site)
-- Job offer age (in days)
-
-Alternatively, you can set up [a custom search filter](https://www.profesia.sk/search_offers.php), and pass the resulting [search results URL](https://www.profesia.sk/praca/skrateny-uvazok/?count_days=1&positions[]=40&salary=1000&salary_period=m&skills[]=73_15_5_12) to the `startUrls` input option.
-
-Hence you can e.g. use Profesia.sk Scraper to dynamically check for existence of certain job offers.
-
-### Input examples
-
-#### Example 1: Get summary of all job offers in last 20 days for full-time on-site cooks with salary 6+ eur/hr
-
-```json
-{
-  "datasetType": "jobOffers",
-  "jobOfferFilterEmploymentType": "fte",
-  "jobOfferFilterLastNDays": 20,
-  "jobOfferFilterMinSalaryPeriod": "hour",
-  "jobOfferFilterMinSalaryValue": 6,
-  "jobOfferFilterQuery": "kuchar",
-  "jobOfferFilterRemoteWorkType": "noRemote",
-}
-```
-
-#### Example 2: Same as above, but specified by providing a custom search results URL
-
-```json
-{
-  "startUrls": ["https://www.profesia.sk/praca/kuchar/plny-uvazok/?count_days=20&remote_work=0&salary=6&salary_period=h"]
-}
-```
-
-#### Example 3: (Advanced) Same as above, but re-configure the crawler to increase the request timeout to 5 min and request retries to 5
-
-```json
-{
-  "startUrls": ["https://www.profesia.sk/praca/kuchar/plny-uvazok/?count_days=20&remote_work=0&salary=6&salary_period=h"],
-  "requestHandlerTimeoutSecs": 300,
-  "maxRequestRetries": 5
-}
-```
-
-## Outputs
-
-Once the actor is done, you can see the overview of results in the Output tab.
-
-To export the data, head over to the Storage tab.
-
-![Profesia.sk Actor dataset overview](./public/imgs/profesia-sk-actor-dataset-overview1.png)
-
-## Sample output from Profesia.sk Scraper
-
-### Job offer
-
-```json
-{
-  "listingUrl": "https://www.profesia.sk/praca/?page_num=5",
-  "employerName": null,
-  "employerUrl": "https://www.profesia.sk/praca/prva-stavebna-sporitelna/C11358?page_num=5",
-  "employerLogoUrl": "https://www.profesia.sk/customdesigns/EasyDesign/1/292/images/11358/logo.png?page_num=5",
-  "offerName": null,
-  "offerUrl": "https://www.profesia.sk/praca/prva-stavebna-sporitelna/O4563553?page_num=5",
-  "offerId": "O4563553",
-  "location": "Stará Ľubovňa",
-  "labels": [],
-  "lastChangeRelativeTime": "pred 11 hodinami",
-  "lastChangeType": "added",
-  "salaryRange": "2 000 EUR/mesiac",
-  "salaryRangeLower": 2000,
-  "salaryRangeUpper": null,
-  "salaryCurrency": "eur",
-  "salaryPeriod": "month",
-  "employmentTypes": [
-    "selfemploy"
-  ],
-  "startDate": "Dohodou",
-  "phoneNumbers": [
-    "+421123456789"
-  ],
-  "datePosted": "2023-04-22",
-  "jobInfoResponsibilities": "Ponúkame pracovné miesta v Starej Ľubovni, Kežmarku a v Spišskej Belej.Sme úspešná firma, plná úspešných ľudí!Chcete zažiť úspech? Ste tu správne! Sme PSS, Prvá stavebná sporiteľňa, s najvyšším podielom na trhu a zaradili sme sa do rebríčka TOP 3 finančných inštitúcií poskytujúcich produkty na financovanie bývania.Pridajte sa k nám a naučíme Vás, ako sa stať expertom na financovanie bývania.Čo bude Vaša úloha v tíme na pozícii obchodný zástupca:spravovať klientske portfólio PSSsamostatne viesť obchodné rokovaniavyhľadávať nových klientovaktívne hľadať a ponúkať klientom riešenia v oblasti financovania bývaniarealizovať obchodné ciele v oblasti sprostredkovania predaja produktov PSSbudovať tímovú spoluprácu",
-  "jobInfoBenefits": "Čo ponúkame:komplexné portfólio produktovstabilné pracovné miesto – kancelária, notebook, databáza klientovadministratívnu a právnu podporubezplatnú certifikáciu v NBSodborné vzdelávanie a  školenia na rozvoj obchodného potenciáluatraktívnu províznu schému, motivačné súťaže, TOP klubyteambuildingypodporu pre začínajúcich obchodných zástupcov – finančná podpora, mentorvideoporadenstvo – online komunikácia s klientombezplatnú marketingovú podporuflexibilný pracovný časprácu na živnosť alebo ako právnická osoba",
-  "jobReqEducation": "stredoškolské s maturitou\nnadstavbové/vyššie odborné vzdelanie\nvysokoškolské I. stupňa\nvysokoškolské II. stupňa\nvysokoškolské III. stupňa",
-  "jobReqIndustry": "stredoškolské s maturitou\nnadstavbové/vyššie odborné vzdelanie\nvysokoškolské I. stupňa\nvysokoškolské II. stupňa\nvysokoškolské III. stupňa",
-  "jobReqOther": "Microsoft Word - ZákladyMicrosoft Excel - Základy",
-  "jobReqSuitableForGraduate": "Áno",
-  "jobReqPersonalSkills": "Čím nás oslovíte:ste ľudský, empatický, sebavedomý, svedomitýmáte príjemné vystupovaniemáte obchodného duchachcete na sebe neustále pracovať a rozvíjať saviete pracovať samostatne, ale rozumiete dôležitosti tímovej spolupráceuž teraz sa tešíte na stretnutia s klientommáte minimálne SŠ vzdelanie s maturitou",
-  "employerDescription": "Sme experti na financovanie bývania a na trhu pôsobíme už 30 rokov. Naše produkty využilo viac ako 2,5 milióna klientov, ktorým sme pomohli splniť si sen o vlastnom bývaní.\n\nZastávame hodnoty, ktoré zabezpečujú férový prístup ku klientom a aj k našim kolegom. Naše úspechy sú výsledkom tímovej spolupráce a práce kolegov motivovaných pestrým benefitným programom a adekvátnym finančným ohodnotením.\n\nAk sa chcete stať súčasťou tímu centrály PSS a nenašli ste pozíciu, ktorá by Vás oslovila, určite nám napíšte na [email protected] \nV prípade záujmu o prácu obchodného zástupcu v regióne, ktorý aktuálne nemá aktívnu inzerciu, prihláste sa prosím na nasledujúcom linku a uveďte svoje kontaktné údaje:\nhttps://ats.nalgoo.com/sk/gate/fopss/position/65267/\n\nNaši kolegovia sa Vám ozvú a preberú s Vami aktuálne možnosti, pretože v PSS si vážime každý jeden talent a vieme oceniť prínos každého kolegu!",
-  "employeeCount": "250-499 zamestnancov",
-  "employerContact": "Kontaktná osoba: Ing. Name RedactedTel.: +421123456789-mail: poslať životopis",
-  "locationCategs": [
-    {
-      "url": "https://www.profesia.sk/praca/stara-lubovna/?page_num=5",
-      "name": "Stará Ľubovňa"
-    }
-  ],
-  "professionCategs": [
-    {
-      "url": "https://www.profesia.sk/praca/klientsky-pracovnik/?page_num=5",
-      "name": "Klientský pracovník"
-    },
-    {
-      "url": "https://www.profesia.sk/praca/obchodny-zastupca/?page_num=5",
-      "name": "Obchodný zástupca"
-    }
-  ],
-  "metadata": {
-    "actorId": "xLwYqj7sxMcGRcYZt",
-    "actorRunId": "TzHJ97DLccjt41Vjf",
-    "actorRunUrl": "https://console.apify.com/actors/xLwYqj7sxMcGRcYZt/runs/TzHJ97DLccjt41Vjf",
-    "contextId": "Zj3uHMtLtq",
-    "requestId": "Q1E7YC5MfacPnSa",
-    "originalUrl": "https://www.profesia.sk/praca/?page_num=5",
-    "loadedUrl": "https://www.profesia.sk/praca/?page_num=5",
-    "dateHandled": "2023-04-22T17:42:14.677Z",
-    "numberOfRetries": 0
-  }
-}
-```
-
-### Companies, professions, industries, languages list
-
-```json
-{
-  "url": "https://www.profesia.sk/praca/-hola-akademia/C255259",
-  "name": "!Hola! akadémia s.r.o.",
-  "count": 1,
-  "metadata": {
-    "actorId": "xLwYqj7sxMcGRcYZt",
-    "actorRunId": "vQ5k8aXbwTROahMeK",
-    "actorRunUrl": "https://console.apify.com/actors/xLwYqj7sxMcGRcYZt/runs/vQ5k8aXbwTROahMeK",
-    "contextId": "bMlblASmeT",
-    "requestId": "RlmnlCkaYRPDswZ",
-    "originalUrl": "https://www.profesia.sk/praca/zoznam-spolocnosti",
-    "loadedUrl": "https://www.profesia.sk/praca/zoznam-spolocnosti/",
-    "dateHandled": "2023-04-22T18:05:38.248Z",
-    "numberOfRetries": 0
-  }
-}
-```
-
-### Locations list
-
-```json
-{
-  "url": "https://www.profesia.sk/praca/bratislavsky-kraj/",
-  "name": "Bratislavský kraj",
-  "count": 7890,
-  "region": "Bratislavský kraj",
-  "country": "Slovenská republika",
-  "metadata": {
-    "actorId": "xLwYqj7sxMcGRcYZt",
-    "actorRunId": "8qwRsXGUZsxlZjRDK",
-    "actorRunUrl": "https://console.apify.com/actors/xLwYqj7sxMcGRcYZt/runs/8qwRsXGUZsxlZjRDK",
-    "contextId": "eEJHPCqmT5",
-    "requestId": "1k0DgwIuJ2QoZ3D",
-    "originalUrl": "https://www.profesia.sk/praca/zoznam-lokalit",
-    "loadedUrl": "https://www.profesia.sk/praca/zoznam-lokalit/",
-    "dateHandled": "2023-04-22T19:33:23.110Z",
-    "numberOfRetries": 0
-  }
-}
-```
-
-### Partners list
-
-```json
-{
-  "name": "Absolventi.STUBA.SK",
-  "url": "http://www.absolventi.stuba.sk/",
-  "description": "Je určený všetkým absolventom, študentom, priateľom i priaznivcom STU v Bratislave. Jeho prostredníctvom môžete získať informácie o aktuálnom dianí, či hľadať medzi našimi čerstvými absolventmi perspektívnych zamestnancov pre svoje firmy. Práce na portáli a jeho definitívnej podobe ešte stále pokračujú.",
-  "logoUrl": "https://www.profesia.sk/images/partner_logos/stuba_90x37.png",
-  "category": "Špecializované servery",
-  "metadata": {
-    "actorId": "xLwYqj7sxMcGRcYZt",
-    "actorRunId": "pdXzgtjmuOsJw2U2M",
-    "actorRunUrl": "https://console.apify.com/actors/xLwYqj7sxMcGRcYZt/runs/pdXzgtjmuOsJw2U2M",
-    "contextId": "rVPpH6Bam1",
-    "requestId": "6DUFNu05KLfFoVN",
-    "originalUrl": "https://www.profesia.sk/partneri",
-    "loadedUrl": "https://www.profesia.sk/partneri",
-    "dateHandled": "2023-04-22T19:34:44.968Z",
-    "numberOfRetries": 1
-  }
-}
-```
-
-## How to integrate Profesia.sk Scraper with other services, APIs or Actors
-You can connect the actor with many of the [integrations on the Apify platform](https://apify.com/integrations). You can integrate with Make, Zapier, Slack, Airbyte, GitHub, Google Sheets, Google Drive, [and more](https://docs.apify.com/integrations). Or you can use [webhooks](https://docs.apify.com/integrations/webhooks) to carry out an action whenever an event occurs, e.g. get a notification whenever Instagram API Scraper successfully finishes a run.
-
-## Use Profesia.sk actor with Apify API
-The Apify API gives you programmatic access to the Apify platform. The API is organized around RESTful HTTP endpoints that enable you to manage, schedule and run Apify actors. The API also lets you access any datasets, monitor actor performance, fetch results, create and update versions, and more.
-
-To access the API using Node.js, use the `apify-client` NPM package. To access the API using Python, use the `apify-client` PyPI package.
-
-Check out the [Apify API reference](https://docs.apify.com/api/v2) docs for full details or click on the [API tab](https://apify.com/jurooravec/profesia-sk-scraper/api) for code examples.
-
-## Is it legal to scrape Profesia.sk?
-It is legal to scrape publicly available data such as product descriptions, prices, or ratings. Read Apify's blog post on [the legality of web scraping](https://blog.apify.com/is-web-scraping-legal/) to learn more.
-
-## Who can I contact for issues with Profesia.sk actor?
-To report issues and find help, head over to the [Discord community](https://discord.com/channels/801163717915574323).
+14. Advertise
+    - [ ] 13.1 Set up campaign to promote the actor
