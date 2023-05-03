@@ -1,38 +1,20 @@
 import { CheerioCrawlingContext } from 'crawlee';
 import * as cheerio from 'cheerio';
-import * as Sentry from '@sentry/node';
 import {
-  cheerioCaptureErrorRouteHandler,
   createCheerioRouteMatchers,
   cheerioDOMLib,
   RouteHandler,
-  pushDataWithMetadata,
+  pushData,
 } from 'apify-actor-utils';
 
 import { GenericListEntry, jobRelatedListsPageActions } from './pageActions/jobRelatedLists';
 import { partnersDOMActions } from './pageActions/partners';
-import {
-  SimpleProfesiaSKJobOfferItem,
-  ProfesiaSkActorInput,
-  RouteLabel,
-  ROUTE_LABEL_ENUM,
-} from './types';
+import { SimpleProfesiaSKJobOfferItem, RouteLabel, ROUTE_LABEL_ENUM } from './types';
 import { datasetTypeToUrl } from './constants';
 import { jobListingPageActions } from './pageActions/jobListing';
 import { jobDetailDOMActions } from './pageActions/jobDetail';
 import { serialAsyncMap, wait } from './utils/async';
-
-// Capture errors as a separate Apify/Actor dataset and pass errors to Sentry
-const reportingDatasetId = 'REPORTING';
-export const errorCaptureHandlerWrapper: typeof cheerioCaptureErrorRouteHandler = (handler) => {
-  return cheerioCaptureErrorRouteHandler(handler, {
-    reportingDatasetId,
-    allowScreenshot: true,
-    onErrorCapture: ({ error, report }) => {
-      Sentry.captureException(error, { extra: report as any });
-    },
-  });
-};
+import type { ActorInput } from './config';
 
 const isUrlOfCompanyProfile = (url: string) =>
   url.match(/[\W]profesia\.sk\/praca\//i) &&
@@ -53,7 +35,7 @@ export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, RouteLa
     handlerLabel: null,
     // Check for main page like https://www.profesia.sk/?#
     match: (url) => url.match(/[\W]profesia\.sk\/?(?:[?#~]|$)/i),
-    action: async (url, ctx, _, handlers) => {
+    action: async (url, ctx) => {
       ctx.log.info(`Redirecting to ${datasetTypeToUrl.jobOffers}`);
       await ctx.crawler.addRequests([datasetTypeToUrl.jobOffers], { forefront: true });
     },
@@ -131,16 +113,21 @@ export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, RouteLa
   },
 ]);
 
-export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ProfesiaSkActorInput) =>
-  ({
+export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorInput) => {
+  const { jobOfferDetailed, includePersonalData } = input;
+
+  return {
     JOB_LISTING: async (ctx) => {
       const { request, log } = ctx;
-      const { jobOfferDetailed } = input;
 
       const onData = async (entries: SimpleProfesiaSKJobOfferItem[]) => {
         // If not detailed, just save the data
         if (!jobOfferDetailed) {
-          await pushDataWithMetadata(entries, ctx);
+          await pushData(entries, ctx, {
+            includeMetadata: true,
+            showPrivate: includePersonalData,
+            privacyMask: {},
+          });
           return;
         }
 
@@ -162,7 +149,17 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: Profes
           const jobDetail = jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: entry }); // prettier-ignore
 
           // Push the data after each scraped page to limit the chance of losing data
-          await Promise.all([pushDataWithMetadata(jobDetail, ctx), wait(100)]);
+          await Promise.all([
+            pushData(jobDetail, ctx, {
+              includeMetadata: true,
+              showPrivate: includePersonalData,
+              privacyMask: {
+                employerContact: () => true,
+                phoneNumbers: () => true,
+              },
+            }),
+            wait(100),
+          ]);
 
           return jobDetail;
         });
@@ -194,14 +191,25 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: Profes
 
       const domLib = cheerioDOMLib(ctx.$, request.loadedUrl || request.url);
       const entry = jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: request.userData?.offer }); // prettier-ignore
-      await pushDataWithMetadata(entry, ctx);
+      await pushData(entry, ctx, {
+        includeMetadata: true,
+        showPrivate: includePersonalData,
+        privacyMask: {
+          employerContact: () => true,
+          phoneNumbers: () => true,
+        },
+      });
     },
 
     JOB_RELATED_LIST: async (ctx) => {
       const { request, log } = ctx;
 
       const onData = async (data: GenericListEntry[]) => {
-        await pushDataWithMetadata(data, ctx);
+        await pushData(data, ctx, {
+          includeMetadata: true,
+          showPrivate: includePersonalData,
+          privacyMask: {},
+        });
       };
 
       const url = request.loadedUrl || request.url;
@@ -223,6 +231,11 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: Profes
 
       const entries = partnersDOMActions.extractPartnerEntries({ domLib, log: ctx.log });
 
-      await pushDataWithMetadata(entries, ctx);
+      await pushData(entries, ctx, {
+        includeMetadata: true,
+        showPrivate: includePersonalData,
+        privacyMask: {},
+      });
     },
-  } satisfies Record<RouteLabel, RouteHandler<Ctx>>);
+  } satisfies Record<RouteLabel, RouteHandler<Ctx>>;
+};

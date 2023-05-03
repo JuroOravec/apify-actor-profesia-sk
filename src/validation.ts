@@ -1,34 +1,21 @@
 import Joi from 'joi';
-import { pick } from 'lodash';
-
 import {
-  DATASET_TYPE,
-  DefaultActorInput,
-  EMPLOYMENT_TYPE,
-  ProfesiaSkActorInput,
-  SALARY_PERIOD,
-  WORK_FROM_HOME_TYPE,
-} from './types';
+  crawlerInputValidationFields,
+  loggingInputValidationFields,
+  privacyInputValidationFields,
+  proxyInputValidationFields,
+} from 'apify-actor-utils';
+
+import { DATASET_TYPE, EMPLOYMENT_TYPE, SALARY_PERIOD, WORK_FROM_HOME_TYPE } from './types';
+import type { ActorInput } from './config';
 import { datasetTypeToUrl } from './constants';
 
-const defaultInputValidationFields: Record<keyof DefaultActorInput, Joi.Schema> = {
-  proxy: Joi.object().optional(), // TODO Expand this type?
-  navigationTimeoutSecs: Joi.number().integer().min(0).optional(),
-  ignoreSslErrors: Joi.boolean().optional(),
-  additionalMimeTypes: Joi.array().items(Joi.string().min(1)).optional(),
-  suggestResponseEncoding: Joi.string().min(1).optional(),
-  forceResponseEncoding: Joi.string().min(1).optional(),
-  requestHandlerTimeoutSecs: Joi.number().integer().min(0).optional(),
-  maxRequestRetries: Joi.number().integer().min(0).optional(),
-  maxRequestsPerCrawl: Joi.number().integer().min(0).optional(),
-  maxRequestsPerMinute: Joi.number().integer().min(0).optional(),
-  minConcurrency: Joi.number().integer().min(0).optional(),
-  maxConcurrency: Joi.number().integer().min(0).optional(),
-  keepAlive: Joi.boolean().optional(),
-};
+const inputValidationSchema = Joi.object<ActorInput>({
+  ...crawlerInputValidationFields,
+  ...proxyInputValidationFields,
+  ...loggingInputValidationFields,
+  ...privacyInputValidationFields,
 
-const inputValidationSchema = Joi.object<ProfesiaSkActorInput>({
-  ...defaultInputValidationFields,
   datasetType: Joi.string().valid(...DATASET_TYPE).optional(), // prettier-ignore
   startUrls: Joi.array().optional(),
   jobOfferDetailed: Joi.boolean().optional(),
@@ -42,7 +29,7 @@ const inputValidationSchema = Joi.object<ProfesiaSkActorInput>({
   jobOfferCountOnly: Joi.boolean().optional(),
 });
 
-export const validateInput = (input: ProfesiaSkActorInput | null) => {
+export const validateInput = (input: ActorInput | null) => {
   Joi.assert(input, inputValidationSchema);
 
   if (!input?.startUrls && !input?.datasetType) {
@@ -65,19 +52,3 @@ export const validateInput = (input: ProfesiaSkActorInput | null) => {
     throw Error(`Invalid value for datasetType option. Got ${input.datasetType}, but allowed values are ${JSON.stringify(Object.keys(datasetTypeToUrl))} `); // prettier-ignore
   }
 };
-
-export const pickDefaultInputFields = <T extends DefaultActorInput>(config: T) =>
-  pick(config, [
-    'navigationTimeoutSecs',
-    'ignoreSslErrors',
-    'additionalMimeTypes',
-    'suggestResponseEncoding',
-    'forceResponseEncoding',
-    'requestHandlerTimeoutSecs',
-    'maxRequestRetries',
-    'maxRequestsPerCrawl',
-    'maxRequestsPerMinute',
-    'minConcurrency',
-    'maxConcurrency',
-    'keepAlive',
-  ]);

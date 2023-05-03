@@ -1,8 +1,6 @@
-import type { ProxyConfigurationOptions } from 'apify';
 import { fromPairs } from 'lodash';
 
 import type { ArrVal } from './utils/types';
-import { CheerioCrawlerOptions } from 'crawlee';
 
 const enumFromArray = <T extends readonly any[]>(arr: T) => {
   return fromPairs(arr.map((k) => [k, k])) as { [Key in ArrVal<T>]: Key };
@@ -24,53 +22,6 @@ export type DatasetType = ArrVal<typeof DATASET_TYPE>;
 export const ROUTE_LABELS = ['JOB_LISTING', 'JOB_DETAIL', 'JOB_RELATED_LIST', 'PARTNERS'] as const;
 export const ROUTE_LABEL_ENUM = enumFromArray(ROUTE_LABELS);
 export type RouteLabel = ArrVal<typeof ROUTE_LABELS>;
-
-/** Crawler config fields that can be overriden from the actor input */
-type OverridableCrawlerConfigActorInput = Pick<
-  CheerioCrawlerOptions,
-  | 'navigationTimeoutSecs'
-  | 'ignoreSslErrors'
-  | 'additionalMimeTypes'
-  | 'suggestResponseEncoding'
-  | 'forceResponseEncoding'
-  | 'requestHandlerTimeoutSecs'
-  | 'maxRequestRetries'
-  | 'maxRequestsPerCrawl'
-  | 'maxRequestsPerMinute'
-  | 'minConcurrency'
-  | 'maxConcurrency'
-  | 'keepAlive'
->;
-
-export interface DefaultActorInput extends OverridableCrawlerConfigActorInput {
-  proxy?: ProxyConfigurationOptions;
-}
-
-/** Shape of the data passed to the actor from Apify */
-export interface ProfesiaSkActorInput extends DefaultActorInput {
-  /** Choose what kind of data you want to extract - job offers, list of companies, list of industries, ... */
-  datasetType?: DatasetType;
-  /** URLs to start with */
-  startUrls?: string[];
-  /** If checked, the scraper will obtain more detailed info for job offers by visit the details page of each job offer to extract data. If un-checked, only the data from the listing page is extracted. For details, please refer to http://apify.com/store/jurooravec/profesia-sk-scraper#output */
-  jobOfferDetailed?: boolean;
-  /** Comma-separated list of keywords. If given, only entries matching the query will be retrieved (full-text search) */
-  jobOfferFilterQuery?: string;
-  /** If set, only up to this number of entries will be extracted */
-  jobOfferFilterMaxCount?: number;
-  /** If set, only entries offering this much or more will be extracted */
-  jobOfferFilterMinSalaryValue?: number;
-  /** Choose if the minimum salary is in per hour or per month format */
-  jobOfferFilterMinSalaryPeriod?: SalaryPeriod;
-  /** If set, only entries with this employment filter will be extracted */
-  jobOfferFilterEmploymentType?: EmploymentType;
-  /** If set, only entries with this type of remote work filter will be extracted */
-  jobOfferFilterRemoteWorkType?: WorkFromHomeType;
-  /** If set, only entries this much days old will be extracted. E.g. 7 = 1 week old, 31 = 1 month old, ... */
-  jobOfferFilterLastNDays?: number;
-  /** If checked, no data is extracted. Instead, the count of matched job offers is printed in the log. */
-  jobOfferCountOnly?: boolean;
-}
 
 export interface SimpleProfesiaSKJobOfferItem extends ProfesiaSkJobOfferSalaryFields {
   /** Listing URL from which this entry was taken. E.g. `"https://www.profesia.sk/praca/` */

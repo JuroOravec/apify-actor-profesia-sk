@@ -3,18 +3,22 @@ import {
   CheerioCrawler,
   CheerioCrawlerOptions,
   CheerioCrawlingContext,
-  RouterHandler,
   createCheerioRouter,
 } from 'crawlee';
-import { createApifyActor } from 'apify-actor-utils';
-import { omitBy } from 'lodash';
+import {
+  createApifyActor,
+  createErrorHandler,
+  createHttpCrawlerOptions,
+  logLevelHandlerWrapper,
+  setupSentry,
+} from 'apify-actor-utils';
 
-import type { ProfesiaSkActorInput, RouteLabel } from './types';
-import { stats } from './lib/stats';
-import { setupSentry } from './lib/sentry';
-import { createHandlers, errorCaptureHandlerWrapper, routes } from './router';
+import type { ActorInput } from './config';
+import type { RouteLabel } from './types';
+import { createHandlers, routes } from './router';
 import { datasetTypeToUrl } from './constants';
-import { pickDefaultInputFields, validateInput } from './validation';
+import { validateInput } from './validation';
+import { getPackageJsonInfo } from './utils/package';
 
 // Flow:
 // 1 Jobs (https://www.profesia.sk/praca/)
@@ -75,8 +79,23 @@ import { pickDefaultInputFields, validateInput } from './validation';
 // - It's available only to partners (so they can reshare content), and you need to pay for it.
 //   - https://podpora.profesia.sk/897202-Export-pracovn%C3%BDch-pon%C3%BAk
 
+/** Crawler options that **may** be overriden by user input */
+const defaultCrawlerOptions: CheerioCrawlerOptions = {
+  maxRequestsPerMinute: 120,
+  // NOTE: Listing page request handler might fetch 20 requests (offer details), so we want to give it time
+  requestHandlerTimeoutSecs: 180,
+  // headless: true,
+  // maxRequestsPerCrawl: 20,
+
+  // SHOULD I USE THESE?
+  // See https://docs.apify.com/academy/expert-scraping-with-apify/solutions/rotating-proxies
+  // useSessionPool: true,
+  // sessionPoolOptions: {},
+};
+
 export const run = async (crawlerConfig?: CheerioCrawlerOptions): Promise<void> => {
-  setupSentry({ enabled: !!process.env.APIFY_IS_AT_HOME });
+  const pkgJson = getPackageJsonInfo(module, ['name']);
+  setupSentry({ sentryOptions: { serverName: pkgJson.name } });
 
   // See docs:
   // - https://docs.apify.com/sdk/js/
@@ -84,17 +103,31 @@ export const run = async (crawlerConfig?: CheerioCrawlerOptions): Promise<void> 
   // - https://docs.apify.com/sdk/js/docs/upgrading/upgrading-to-v3#apify-sdk
   await Actor.main(
     async () => {
-      const actor = await createApifyActor<
-        CheerioCrawlingContext,
-        RouteLabel,
-        ProfesiaSkActorInput
-      >({
+      const actor = await createApifyActor<CheerioCrawlingContext, RouteLabel, ActorInput>({
         validateInput,
         router: createCheerioRouter(),
         routes,
         routeHandlers: ({ input }) => createHandlers(input!),
-        handlerWrapper: errorCaptureHandlerWrapper,
-        createCrawler: ({ router, input }) => createCrawler({ router, input, crawlerConfig }),
+        handlerWrappers: ({ input }) => [
+          logLevelHandlerWrapper<CheerioCrawlingContext<any, any>>(input?.logLevel ?? 'info'),
+        ],
+        createCrawler: ({ router, proxy, input }) => {
+          const options = createHttpCrawlerOptions<CheerioCrawlerOptions, ActorInput>({
+            input,
+            defaults: defaultCrawlerOptions,
+            overrides: {
+              requestHandler: router,
+              proxyConfiguration: proxy,
+              // Capture errors as a separate Apify/Actor dataset and pass errors to Sentry
+              failedRequestHandler: createErrorHandler({
+                reportingDatasetId: 'REPORTING',
+                sendToSentry: true,
+              }),
+              ...crawlerConfig,
+            },
+          });
+          return new CheerioCrawler(options);
+        },
       });
 
       const startUrls: string[] = [];
@@ -105,43 +138,4 @@ export const run = async (crawlerConfig?: CheerioCrawlerOptions): Promise<void> 
     },
     { statusMessage: 'Crawling finished!' }
   );
-};
-
-// prettier-ignore
-const createCrawler = async ({ router, input, crawlerConfig }: {
-  input: ProfesiaSkActorInput | null;
-  router: RouterHandler<CheerioCrawlingContext>;
-  crawlerConfig?: CheerioCrawlerOptions;
-}) => {
-  const proxyConfiguration = process.env.APIFY_IS_AT_HOME
-    ? await Actor.createProxyConfiguration(input?.proxy)
-    : undefined;
-
-  return new CheerioCrawler({
-    // ----- 1. DEFAULTS -----
-    maxRequestsPerMinute: 120,
-    // NOTE: Listing page request handler might fetch 20 requests (offer details), so we want to give it time
-    requestHandlerTimeoutSecs: 180, 
-    // headless: true,
-    // maxRequestsPerCrawl: 20,
-    
-    // SHOULD I USE THESE?
-    // See https://docs.apify.com/academy/expert-scraping-with-apify/solutions/rotating-proxies
-    // useSessionPool: true,
-    // sessionPoolOptions: {},
-
-    // ----- 2. CONFIG FROM INPUT -----
-    ...omitBy(pickDefaultInputFields(input ?? {}), (field) => field === undefined),
-    
-    // ----- 3. CONFIG THAT USER CANNOT CHANGE -----
-    proxyConfiguration,
-    // Handle all failed requests
-    failedRequestHandler: async ({ error, request }) => {
-      stats.addError(request.url, (error as Error)?.message);
-    },
-    requestHandler: router,
-
-    // ----- 4. OVERRIDES - E.G. TEST CONFIG -----
-    ...omitBy(crawlerConfig ?? {}, (field) => field === undefined),
-  });
 };

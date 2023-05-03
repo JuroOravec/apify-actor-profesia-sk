@@ -9,12 +9,12 @@ import type {
   SimpleProfesiaSKJobOfferItem,
   SalaryPeriod,
   WorkFromHomeType,
-  ProfesiaSkActorInput,
 } from '../types';
 import type { MaybePromise } from '../utils/types';
 import { jobDetailMethods } from './jobDetail';
 import { equalUrls } from '../utils/url';
 import { strAsNumber } from '../utils/format';
+import type { ActorInput } from '../config';
 
 interface PageCountInfo {
   total: number;
@@ -25,7 +25,7 @@ interface PageCountInfo {
 interface ExtractJobOffersOptions<TEl> {
   domLib: DOMLib<TEl>;
   log: Log;
-  input: ProfesiaSkActorInput;
+  input: ActorInput;
   listingPageNum?: number | null;
   onFetchHTML: (overrideOptions?: Partial<OptionsInit>) => Promise<string>;
   onData: (data: SimpleProfesiaSKJobOfferItem[]) => MaybePromise<void>;
@@ -200,7 +200,7 @@ export const jobListingMethods = {
   }: {
     url: string | null;
     log: Log;
-    input: ProfesiaSkActorInput;
+    input: ActorInput;
   }) => {
     const {
       jobOfferFilterEmploymentType,
@@ -259,7 +259,7 @@ export const jobListingMethods = {
     itemsCount,
     listingPageNum,
   }: {
-    input: ProfesiaSkActorInput;
+    input: ActorInput;
     entries: SimpleProfesiaSKJobOfferItem[];
     itemsCount: number | null;
     listingPageNum: number | null;
