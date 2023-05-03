@@ -197,7 +197,7 @@ const actorSpec = {
       name: 'companies',
       shortDesc: 'List of companies that have job offers',
       url: 'https://www.profesia.sk/praca/zoznam-spolocnosti',
-      size: 21000, // TODO
+      size: 6200,
       isDefault: false,
       filters: [],
       modes: [],
@@ -208,13 +208,35 @@ const actorSpec = {
         personalDataSubjects: [],
       },
       perfTable: 'other',
-      perfStats: [], // TODO
+      // prettier-ignore
+      perfStats: [
+        { rowId: 'default', colId: 'fullRun', mode: null, count: 6184, costUsd: 0.039, timeSec: 33 },
+      ],
+      output: {
+        exampleEntry: {
+          url: 'https://www.profesia.sk/praca/americka-rada/C259704',
+          name: '"Americká rada"',
+          count: 1,
+          metadata: {
+            actorId: 'xLwYqj7sxMcGRcYZt',
+            actorRunId: '9NqzdWbldXDhnfr90',
+            actorRunUrl:
+              'https://console.apify.com/actors/xLwYqj7sxMcGRcYZt/runs/9NqzdWbldXDhnfr90',
+            contextId: 'STGbhv5vhC',
+            requestId: 'RlmnlCkaYRPDswZ',
+            originalUrl: 'https://www.profesia.sk/praca/zoznam-spolocnosti',
+            loadedUrl: 'https://www.profesia.sk/praca/zoznam-spolocnosti/',
+            dateHandled: '2023-05-03T08:22:25.763Z',
+            numberOfRetries: 2,
+          },
+        },
+      },
     },
     {
       name: 'industries',
       shortDesc: 'List of industries that have job offers',
       url: 'https://www.profesia.sk/praca/zoznam-pracovnych-oblasti',
-      size: 21000, // TODO
+      size: 40,
       isDefault: false,
       filters: [],
       modes: [],
@@ -225,13 +247,34 @@ const actorSpec = {
         personalDataSubjects: [],
       },
       perfTable: 'other',
-      perfStats: [], // TODO
+      perfStats: [
+        { rowId: 'default', colId: 'fullRun', mode: null, count: 40, costUsd: 0.003, timeSec: 10 },
+      ],
+      output: {
+        exampleEntry: {
+          url: 'https://www.profesia.sk/praca/administrativa/',
+          name: 'Administratíva',
+          count: 1987,
+          metadata: {
+            actorId: 'xLwYqj7sxMcGRcYZt',
+            actorRunId: 'aXiYA7Fvhe9yc770e',
+            actorRunUrl:
+              'https://console.apify.com/actors/xLwYqj7sxMcGRcYZt/runs/aXiYA7Fvhe9yc770e',
+            contextId: 'qrClMCZClt',
+            requestId: '5pg1u9iBvSHT8Qj',
+            originalUrl: 'https://www.profesia.sk/praca/zoznam-pracovnych-oblasti',
+            loadedUrl: 'https://www.profesia.sk/praca/zoznam-pracovnych-oblasti/',
+            dateHandled: '2023-05-03T08:11:59.543Z',
+            numberOfRetries: 0,
+          },
+        },
+      },
     },
     {
       name: 'locations',
       shortDesc: 'List of locations that have job offers',
       url: 'https://www.profesia.sk/praca/zoznam-lokalit',
-      size: 21000, // TODO
+      size: 200,
       isDefault: false,
       filters: [],
       modes: [],
@@ -242,13 +285,36 @@ const actorSpec = {
         personalDataSubjects: [],
       },
       perfTable: 'other',
-      perfStats: [], // TODO
+      perfStats: [
+        { rowId: 'default', colId: 'fullRun', mode: null, count: 196, costUsd: 0.005, timeSec: 17 },
+      ],
+      output: {
+        exampleEntry: {
+          url: 'https://www.profesia.sk/praca/bratislavsky-kraj/',
+          name: 'Bratislavský kraj',
+          count: 7966,
+          region: 'Bratislavský kraj',
+          country: 'Slovenská republika',
+          metadata: {
+            actorId: 'xLwYqj7sxMcGRcYZt',
+            actorRunId: 'lfAcMFtoU5viZUoCI',
+            actorRunUrl:
+              'https://console.apify.com/actors/xLwYqj7sxMcGRcYZt/runs/lfAcMFtoU5viZUoCI',
+            contextId: 'Owb8eoeUH8',
+            requestId: '1k0DgwIuJ2QoZ3D',
+            originalUrl: 'https://www.profesia.sk/praca/zoznam-lokalit',
+            loadedUrl: 'https://www.profesia.sk/praca/zoznam-lokalit/',
+            dateHandled: '2023-05-03T08:27:02.347Z',
+            numberOfRetries: 1,
+          },
+        },
+      },
     },
     {
       name: 'professions',
       shortDesc: 'List of professions',
       url: 'https://www.profesia.sk/praca/zoznam-pozicii',
-      size: 21000, // TODO
+      size: 500,
       isDefault: false,
       filters: [],
       modes: [],
@@ -259,13 +325,34 @@ const actorSpec = {
         personalDataSubjects: [],
       },
       perfTable: 'other',
-      perfStats: [], // TODO
+      perfStats: [
+        { rowId: 'default', colId: 'fullRun', mode: null, count: 517, costUsd: 0.007, timeSec: 17 },
+      ],
+      output: {
+        exampleEntry: {
+          url: 'https://www.profesia.sk/praca/dotnet-programator/',
+          name: '.NET programátor',
+          count: 84,
+          metadata: {
+            actorId: 'xLwYqj7sxMcGRcYZt',
+            actorRunId: '6M3q7QCbUUWBjp4zh',
+            actorRunUrl:
+              'https://console.apify.com/actors/xLwYqj7sxMcGRcYZt/runs/6M3q7QCbUUWBjp4zh',
+            contextId: 'pd32tdaf8d',
+            requestId: 'PwFXfeXgSpuftFt',
+            originalUrl: 'https://www.profesia.sk/praca/zoznam-pozicii',
+            loadedUrl: 'https://www.profesia.sk/praca/zoznam-pozicii/',
+            dateHandled: '2023-05-03T08:20:30.582Z',
+            numberOfRetries: 1,
+          },
+        },
+      },
     },
     {
       name: 'languages',
       shortDesc: 'List of advertised language requirements',
       url: 'https://www.profesia.sk/praca/zoznam-pozicii',
-      size: 21000, // TODO
+      size: 30,
       isDefault: false,
       filters: [],
       modes: [],
@@ -276,13 +363,34 @@ const actorSpec = {
         personalDataSubjects: [],
       },
       perfTable: 'other',
-      perfStats: [], // TODO
+      perfStats: [
+        { rowId: 'default', colId: 'fullRun', mode: null, count: 29, costUsd: 0.004, timeSec: 14 },
+      ],
+      output: {
+        exampleEntry: {
+          url: 'https://www.profesia.sk/praca/anglicky-jazyk/',
+          name: 'Anglický jazyk',
+          count: 7877,
+          metadata: {
+            actorId: 'xLwYqj7sxMcGRcYZt',
+            actorRunId: 'qZjKLARF76gcLAN4m',
+            actorRunUrl:
+              'https://console.apify.com/actors/xLwYqj7sxMcGRcYZt/runs/qZjKLARF76gcLAN4m',
+            contextId: 'iPbY5cpzya',
+            requestId: 'q50iTwf3pOgYUnO',
+            originalUrl: 'https://www.profesia.sk/praca/zoznam-jazykovych-znalosti',
+            loadedUrl: 'https://www.profesia.sk/praca/zoznam-jazykovych-znalosti/',
+            dateHandled: '2023-05-03T08:24:21.395Z',
+            numberOfRetries: 0,
+          },
+        },
+      },
     },
     {
       name: 'partners',
       shortDesc: 'List of partners of profesia.sk',
       url: 'https://profesia.sk/partneri',
-      size: 21000, // TODO
+      size: 70,
       isDefault: false,
       filters: [],
       modes: [],
@@ -293,9 +401,33 @@ const actorSpec = {
         personalDataSubjects: [],
       },
       perfTable: 'other',
-      perfStats: [], // TODO
+      perfStats: [
+        { rowId: 'default', colId: 'fullRun', mode: null, count: 70, costUsd: 0.003, timeSec: 12 },
+      ],
+      output: {
+        exampleEntry: {
+          name: 'Absolventi.STUBA.SK',
+          url: 'http://www.absolventi.stuba.sk/',
+          description:
+            'Je určený všetkým absolventom, študentom, priateľom i priaznivcom STU v Bratislave. Jeho prostredníctvom môžete získať informácie o aktuálnom dianí, či hľadať medzi našimi čerstvými absolventmi perspektívnych zamestnancov pre svoje firmy. Práce na portáli a jeho definitívnej podobe ešte stále pokračujú.',
+          logoUrl: 'https://www.profesia.sk/images/partner_logos/stuba_90x37.png',
+          category: 'Špecializované servery',
+          metadata: {
+            actorId: 'xLwYqj7sxMcGRcYZt',
+            actorRunId: 'vdcUN6FBBTEmwBE6T',
+            actorRunUrl:
+              'https://console.apify.com/actors/xLwYqj7sxMcGRcYZt/runs/vdcUN6FBBTEmwBE6T',
+            contextId: 'y7RcAIYVfY',
+            requestId: '6DUFNu05KLfFoVN',
+            originalUrl: 'https://www.profesia.sk/partneri',
+            loadedUrl: 'https://www.profesia.sk/partneri',
+            dateHandled: '2023-05-03T08:25:35.747Z',
+            numberOfRetries: 1,
+          },
+        },
+      },
     },
-  ] as any,
+  ],
 } satisfies ApifyScraperActorSpec;
 
 export default actorSpec;
