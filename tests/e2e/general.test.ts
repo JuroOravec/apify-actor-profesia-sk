@@ -11,6 +11,7 @@ import {
 import { datasetTypeToUrl } from '../../src/constants';
 import type { DatasetType } from '../../src/types';
 import { run } from '../../src/actor';
+import type { ActorInput } from '../../src/config';
 
 const log = (...args) => console.log(...args);
 const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
@@ -31,6 +32,13 @@ describe(
   () => {
     beforeEach(() => {
       vi.resetAllMocks();
+
+      vi.mock('pkginfo', () => ({
+        default: (obj, { include }) => {
+          obj.exports = obj.exports || {};
+          obj.exports.name = 'test_package_name';
+        },
+      }));
     });
 
     testCases.forEach(
@@ -38,12 +46,13 @@ describe(
         it(`extracts ${datasetType} when datasetType=${datasetType}`, () => {
           expect.assertions(numOfAssertCalls);
           let calls = 0;
-          return runActorTest({
+          return runActorTest<any, ActorInput>({
             vi,
             input: {
               datasetType: datasetType as DatasetType,
               jobOfferFilterMaxCount: 3,
               jobOfferDetailed: false,
+              includePersonalData: true,
             },
             runActor,
             onBatchAddRequests: (req) => {

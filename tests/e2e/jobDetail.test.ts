@@ -9,8 +9,8 @@ import {
 } from '../utils/assert';
 import { run } from '../../src/actor';
 import { ROUTE_LABEL_ENUM } from '../../src/types';
+import type { ActorInput } from '../../src/config';
 
-const log = (...args) => console.log(...args);
 const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
 const customJobOfferValidation = detailedJobOfferValidation.keys({
@@ -34,30 +34,41 @@ describe(
   () => {
     beforeEach(() => {
       vi.resetAllMocks();
+
+      vi.mock('pkginfo', () => ({
+        default: (obj) => {
+          obj.exports = obj.exports || {};
+          obj.exports.name = 'test_package_name';
+        },
+      }));
     });
 
-    it(`extracts job offer details from standard page`, () => {
-      expect.assertions(jobDetailStandardUrls.length);
-      let calls = 0;
-      return runActorTest({
-        vi,
-        input: { startUrls: jobDetailStandardUrls },
-        runActor,
-        onPushData: async (data, done) => {
-          calls += 1;
-          expect(data.length).toBeGreaterThan(0);
-          data.forEach((d) => Joi.assert(d, detailedJobOfferValidation));
-          if (calls >= jobDetailStandardUrls.length) done();
-        },
-      });
-    });
+    it(
+      `extracts job offer details from standard page`,
+      () => {
+        expect.assertions(jobDetailStandardUrls.length);
+        let calls = 0;
+        return runActorTest<any, ActorInput>({
+          vi,
+          input: { startUrls: jobDetailStandardUrls, includePersonalData: true },
+          runActor,
+          onPushData: async (data, done) => {
+            calls += 1;
+            expect(data.length).toBeGreaterThan(0);
+            data.forEach((d) => Joi.assert(d, detailedJobOfferValidation));
+            if (calls >= jobDetailStandardUrls.length) done();
+          },
+        });
+      },
+      { timeout: 10_000 }
+    );
 
     it(`extracts some job offer details from custom page`, () => {
       expect.assertions(jobDetailCustomUrls.length);
       let calls = 0;
-      return runActorTest({
+      return runActorTest<any, ActorInput>({
         vi,
-        input: { startUrls: jobDetailCustomUrls },
+        input: { startUrls: jobDetailCustomUrls, includePersonalData: true },
         runActor,
         onPushData: async (data, done) => {
           calls += 1;

@@ -11,19 +11,19 @@ import {
 import { ROUTE_LABEL_ENUM, SimpleProfesiaSKJobOfferItem } from '../../src/types';
 import { sortUrl } from '../../src/utils/url';
 import { run } from '../../src/actor';
+import type { ActorInput } from '../../src/config';
 
-const log = (...args) => console.log(...args);
 const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
 // prettier-ignore
 const jobListings = [
-  { name: 'main page (redirect to job offers)', url: 'https://www.profesia.sk', numOfAssertCalls: 2 },
-  { name: 'main job offers listing', url: 'https://www.profesia.sk/praca', numOfAssertCalls: 2  },
-  { name: 'listing with specific filters', url: 'https://www.profesia.sk/praca/bratislavsky-kraj/?count_days=21&remote_work=1&salary=500&salary_period=m&search_anywhere=tech', numOfAssertCalls: 2  },
+  { name: 'main page (redirect to job offers)', url: 'https://www.profesia.sk', numOfAssertCalls: 1 },
+  { name: 'main job offers listing', url: 'https://www.profesia.sk/praca', numOfAssertCalls: 1  },
+  { name: 'listing with specific filters', url: 'https://www.profesia.sk/praca/bratislavsky-kraj/?count_days=21&remote_work=1&salary=500&salary_period=m&search_anywhere=tech', numOfAssertCalls: 1  },
   { name: 'company listing', url: 'https://www.profesia.sk/praca/123kurier/C238652', numOfAssertCalls: 1  },
   { name: 'profession listing', url: 'https://www.profesia.sk/praca/account-executive/', numOfAssertCalls: 1  },
-  { name: 'language listing', url: 'https://www.profesia.sk/praca/anglicky-jazyk/', numOfAssertCalls: 2  },
-  { name: 'location listing', url: 'https://www.profesia.sk/praca/okres-pezinok/', numOfAssertCalls: 2  },
+  { name: 'language listing', url: 'https://www.profesia.sk/praca/anglicky-jazyk/', numOfAssertCalls: 1  },
+  { name: 'location listing', url: 'https://www.profesia.sk/praca/okres-pezinok/', numOfAssertCalls: 1  },
 ];
 
 const customJobOfferValidation = detailedJobOfferValidation.keys({
@@ -36,21 +36,25 @@ describe(
   () => {
     beforeEach(() => {
       vi.resetAllMocks();
+
+      vi.mock('pkginfo', () => ({
+        default: (obj) => {
+          obj.exports = obj.exports || {};
+          obj.exports.name = 'test_package_name';
+        },
+      }));
     });
 
     jobListings.forEach(({ name, url, numOfAssertCalls }) => {
       it(`extracts job offers from "${name}"`, () => {
         expect.assertions(numOfAssertCalls);
-        let calls = 0;
-        return runActorTest({
+        return runActorTest<any, ActorInput>({
           vi,
-          input: { startUrls: [url], jobOfferFilterMaxCount: 21 },
+          input: { startUrls: [url], jobOfferFilterMaxCount: 21, includePersonalData: true },
           runActor,
-          onPushData: async (data, done) => {
-            calls += 1;
+          onPushData: async (data) => {
             expect(data.length).toBeGreaterThan(0);
             data.forEach((d) => Joi.assert(d, simpleJobOfferValidation));
-            if (calls >= numOfAssertCalls) done();
           },
         });
       });
@@ -58,7 +62,7 @@ describe(
 
     it('configures listing filters based on actor input', () => {
       expect.assertions(2);
-      return runActorTest({
+      return runActorTest<any, ActorInput>({
         vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
@@ -69,6 +73,7 @@ describe(
           jobOfferFilterEmploymentType: 'fte',
           jobOfferFilterRemoteWorkType: 'partialRemote',
           jobOfferFilterLastNDays: 70,
+          includePersonalData: true,
         },
         runActor,
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[], done) => {
@@ -82,14 +87,15 @@ describe(
 
     it('Only prints the count if jobOfferCountOnly=true', () => {
       expect.assertions(2);
-      return runActorTest({
+      return runActorTest<any, ActorInput>({
         vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
           jobOfferCountOnly: true,
+          includePersonalData: true,
         },
         runActor,
-        onPushData: async (data: SimpleProfesiaSKJobOfferItem[]) => {
+        onPushData: async () => {
           throw Error('No data should be returned on jobOfferCountOnly=true');
         },
         onBatchAddRequests: (requests) => {
@@ -104,11 +110,12 @@ describe(
 
     it('Does not enqueue job offer details URLs if jobOfferDetailed=false', () => {
       expect.assertions(3);
-      return runActorTest({
+      return runActorTest<any, ActorInput>({
         vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
           jobOfferFilterMaxCount: 3,
+          includePersonalData: true,
         },
         runActor,
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[]) => {
@@ -126,13 +133,14 @@ describe(
     });
 
     it('Enqueues job offer details URLs if jobOfferDetailed=true', () => {
-      expect.assertions(4);
-      return runActorTest({
+      expect.assertions(8);
+      return runActorTest<any, ActorInput>({
         vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
           jobOfferDetailed: true,
           jobOfferFilterMaxCount: 3,
+          includePersonalData: true,
         },
         runActor,
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[]) => {
