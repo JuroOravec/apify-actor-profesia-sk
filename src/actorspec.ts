@@ -2,7 +2,7 @@ import type { DatasetFeatures, DatasetModes, DatasetOutput } from 'actor-spec';
 import type { ApifyScraperActorSpec, WithActorEntryMetadata } from 'apify-actor-utils';
 import { fromPairs } from 'lodash';
 
-import { DetailedProfesiaSKJobOfferItem, SimpleProfesiaSKJobOfferItem } from './types';
+import type { DetailedProfesiaSKJobOfferItem, SimpleProfesiaSKJobOfferItem } from './types';
 
 type JobOfferDetailedFields = Exclude<keyof DetailedProfesiaSKJobOfferItem, keyof SimpleProfesiaSKJobOfferItem>; // prettier-ignore
 const jobOfferDetailedField: JobOfferDetailedFields[] = [
@@ -94,7 +94,7 @@ const actorSpec = {
   },
   datasets: [
     {
-      name: 'jobOffers',
+      name: 'job offers',
       shortDesc: 'Job offers',
       url: 'https://profesia.sk/praca',
       size: 21000,
