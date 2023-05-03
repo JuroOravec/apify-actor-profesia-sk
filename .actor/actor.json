@@ -1,12 +1,304 @@
 {
-    "actorSpecification": 1,
-    "name": "profesia-sk-scraper",
+  "actorSpecification": 1,
+  "name": "profesia-sk-scraper",
+  "title": "Profesia.sk Scraper",
+  "description": "One-stop-shop for all data on Profesia.sk. Extract job offers, list of companies, professions, locations... Job offers include salary, textual info, company, and more.",
+  "version": "1.0",
+  "dockerfile": "./Dockerfile",
+  "input": {
+    "schemaVersion": 1,
     "title": "Profesia.sk Scraper",
-    "description": "One-stop-shop for all data on Profesia.sk. Extract job offers, list of companies, professions, locations... Job offers include salary, textual info, company, and more.",
-    "version": "1.0",
-    "dockerfile": "./Dockerfile",
-    "meta": {
-        "templateId": "ts-crawlee-playwright-chrome"
-    },
-    "input": "./input_schema.json"
+    "description": "Configure the Profesia.sk Scraper. <br/><br/>\n      <strong>NOTE:</strong> Either <strong>Dataset type</strong> or\n      <strong>Start URLs</strong> must be given.",
+    "type": "object",
+    "properties": {
+      "datasetType": {
+        "type": "string",
+        "title": "Dataset type",
+        "description": "Use this option if you want to scrape a whole dataset,\n        not just specific URLs.<br/><br/>\n        This option is ignored if <strong>Start URLs:</strong> are given",
+        "editor": "select",
+        "example": "jobOffers",
+        "default": "jobOffers",
+        "prefill": "jobOffers",
+        "enum": [
+          "jobOffers",
+          "industries",
+          "professions",
+          "companies",
+          "languages",
+          "locations",
+          "partners"
+        ],
+        "enumTitles": [
+          "Job Offers",
+          "Industries",
+          "Professions",
+          "Companies",
+          "Languages",
+          "Locations",
+          "Partners"
+        ],
+        "nullable": true
+      },
+      "startUrls": {
+        "title": "Start URLs",
+        "type": "array",
+        "description": "Select specific URLs to scrape. This option takes precedence over\n        <strong>Dataset type</strong>.<br/><br/>\n        - If the URL is a listing page or a company page, all entries of that list are extracted.<br/>\n        - If the URL is a job offer page, only that page is extracted.<br/>\n        - If the URL corresponds to other <strong>Dataset type</strong> (e.g. list of partners), this kind of dataset is extracted.",
+        "editor": "requestListSources"
+      },
+      "jobOfferDetailed": {
+        "title": "Detailed",
+        "type": "boolean",
+        "description": "If checked, the scraper will obtain more detailed info\n      for job offers by visit the details page of each job offer.<br/><br/>\n      If un-checked, only the data from the listing page is extracted.<br/><br/>\n      For details, please refer to https://apify.com/jurooravec/profesia-sk-scraper#output",
+        "example": true,
+        "default": true,
+        "sectionCaption": "Job Offer Filters",
+        "sectionDescription": "These filters are applied <strong>ONLY</strong> when scraping job offers",
+        "nullable": true
+      },
+      "jobOfferFilterQuery": {
+        "type": "string",
+        "title": "Search keywords (full-text search)",
+        "description": "Comma-separated list of keywords. If given, only entries\n      matching the keywords will be retrieved (full-text search)",
+        "example": "specialist, Bratislava",
+        "editor": "textfield",
+        "nullable": true
+      },
+      "jobOfferFilterMinSalaryValue": {
+        "title": "Min salary",
+        "type": "integer",
+        "description": "If set, only entries offering this much or more will be extracted",
+        "example": 1000,
+        "minimum": 1,
+        "nullable": true
+      },
+      "jobOfferFilterMinSalaryPeriod": {
+        "title": "Min salary per hour/month",
+        "type": "string",
+        "description": "Choose if the minimum salary is in per hour or per month format",
+        "editor": "select",
+        "example": "month",
+        "default": "month",
+        "prefill": "month",
+        "enum": [
+          "month",
+          "hour"
+        ],
+        "enumTitles": [
+          "Per month",
+          "Per hour"
+        ],
+        "nullable": true
+      },
+      "jobOfferFilterEmploymentType": {
+        "title": "Type of employment",
+        "type": "string",
+        "description": "If set, only entries with this employment filter will be extracted",
+        "editor": "select",
+        "example": "fte",
+        "enum": [
+          "fte",
+          "pte",
+          "selfemploy",
+          "voluntary",
+          "internship"
+        ],
+        "enumTitles": [
+          "Fte",
+          "Pte",
+          "Selfemploy",
+          "Voluntary",
+          "Internship"
+        ],
+        "nullable": true
+      },
+      "jobOfferFilterRemoteWorkType": {
+        "title": "Remote vs On-site",
+        "type": "string",
+        "description": "If set, only entries with this type of remote work filter will be extracted",
+        "editor": "select",
+        "example": "fullRemote",
+        "enum": [
+          "fullRemote",
+          "partialRemote",
+          "noRemote"
+        ],
+        "enumTitles": [
+          "Full Remote",
+          "Partial Remote",
+          "No Remote"
+        ],
+        "nullable": true
+      },
+      "jobOfferFilterLastNDays": {
+        "title": "Last N days",
+        "type": "integer",
+        "description": "If set, only entries up to this much days old will be extracted.\n    E.g. 7 = max 1 week old, 31 = max 1 month old, ...",
+        "example": 10,
+        "minimum": 0,
+        "nullable": true
+      },
+      "jobOfferFilterMaxCount": {
+        "title": "Target number of results",
+        "type": "integer",
+        "description": "If set, only up to this number of entries will be extracted.\n    The actual number of entries might be higher than this due to multiple pages\n    being scraped at the same time.",
+        "default": 100,
+        "prefill": 100,
+        "example": 100,
+        "minimum": 1,
+        "nullable": true
+      },
+      "jobOfferCountOnly": {
+        "title": "Count the matched job offers",
+        "type": "boolean",
+        "description": "If checked, no data is extracted. Instead, the count of matched\n    job offers is printed in the log.",
+        "default": false,
+        "groupCaption": "Troubleshooting options",
+        "groupDescription": "Use these to verify that your custom startUrls are correct",
+        "nullable": true
+      },
+      "proxy": {
+        "title": "Proxy configuration",
+        "type": "object",
+        "description": "Select proxies to be used by your crawler.",
+        "editor": "proxy",
+        "sectionCaption": "Proxy",
+        "sectionDescription": "Configure the proxy"
+      },
+      "includePersonalData": {
+        "title": "Include personal data",
+        "type": "boolean",
+        "description": "By default, fields that are potential personal data are censored. Toggle this option on to get the un-uncensored values.<br/><br/><strong>WARNING:</strong> Turn this on ONLY if you have consent, legal basis for using the data, or at your own risk. <a href=\"https://gdpr.eu/eu-gdpr-personal-data/\">Learn more</a>",
+        "default": false,
+        "example": false,
+        "nullable": true,
+        "sectionCaption": "Privacy & Data governance (GDPR)"
+      },
+      "maxRequestRetries": {
+        "title": "maxRequestRetries",
+        "type": "integer",
+        "description": "Indicates how many times the request is retried if <a href=\"https://crawlee.dev/api/basic-crawler/interface/BasicCrawlerOptions#requestHandler\">BasicCrawlerOptions.requestHandler</a> fails.",
+        "example": 3,
+        "prefill": 3,
+        "minimum": 0,
+        "nullable": true,
+        "sectionCaption": "Crawler configuration (Advanced)",
+        "sectionDescription": "These options are applied directly to the Crawler. In majority of cases you don't need to change these. See https://crawlee.dev/api/basic-crawler/interface/BasicCrawlerOptions"
+      },
+      "maxRequestsPerMinute": {
+        "title": "maxRequestsPerMinute",
+        "type": "integer",
+        "description": "The maximum number of requests per minute the crawler should run. We can pass any positive, non-zero integer.",
+        "example": 120,
+        "prefill": 120,
+        "minimum": 1,
+        "nullable": true
+      },
+      "maxRequestsPerCrawl": {
+        "title": "maxRequestsPerCrawl",
+        "type": "integer",
+        "description": "Maximum number of pages that the crawler will open. The crawl will stop when this limit is reached. <br/><br/> <strong>NOTE:</strong> In cases of parallel crawling, the actual number of pages visited might be slightly higher than this value.",
+        "minimum": 1,
+        "nullable": true
+      },
+      "minConcurrency": {
+        "title": "minConcurrency",
+        "type": "integer",
+        "description": "Sets the minimum concurrency (parallelism) for the crawl.<br/><br/><strong>WARNING:</strong> If we set this value too high with respect to the available system memory and CPU, our crawler will run extremely slow or crash. If not sure, it's better to keep the default value and the concurrency will scale up automatically.",
+        "example": 1,
+        "prefill": 1,
+        "minimum": 1,
+        "nullable": true
+      },
+      "maxConcurrency": {
+        "title": "maxConcurrency",
+        "type": "integer",
+        "description": "Sets the maximum concurrency (parallelism) for the crawl.",
+        "minimum": 1,
+        "nullable": true
+      },
+      "navigationTimeoutSecs": {
+        "title": "navigationTimeoutSecs",
+        "type": "integer",
+        "description": "Timeout in which the HTTP request to the resource needs to finish, given in seconds.",
+        "minimum": 0,
+        "nullable": true
+      },
+      "requestHandlerTimeoutSecs": {
+        "title": "requestHandlerTimeoutSecs",
+        "type": "integer",
+        "description": "Timeout in which the function passed as <a href=\"https://crawlee.dev/api/basic-crawler/interface/BasicCrawlerOptions#requestHandler\">BasicCrawlerOptions.requestHandler</a> needs to finish, in seconds.",
+        "example": 180,
+        "prefill": 180,
+        "minimum": 0,
+        "nullable": true
+      },
+      "keepAlive": {
+        "title": "keepAlive",
+        "type": "boolean",
+        "description": "Allows to keep the crawler alive even if the RequestQueue gets empty. With keepAlive: true the crawler will keep running, waiting for more requests to come.",
+        "nullable": true
+      },
+      "ignoreSslErrors": {
+        "title": "ignoreSslErrors",
+        "type": "boolean",
+        "description": "If set to true, SSL certificate errors will be ignored.",
+        "nullable": true
+      },
+      "additionalMimeTypes": {
+        "title": "additionalMimeTypes",
+        "type": "array",
+        "description": "An array of MIME types you want the crawler to load and process. By default, only text/html and application/xhtml+xml MIME types are supported.",
+        "editor": "stringList",
+        "uniqueItems": true,
+        "nullable": true
+      },
+      "suggestResponseEncoding": {
+        "title": "suggestResponseEncoding",
+        "type": "string",
+        "description": "By default this crawler will extract correct encoding from the HTTP response headers. There are some websites which use invalid headers. Those are encoded using the UTF-8 encoding. If those sites actually use a different encoding, the response will be corrupted. You can use suggestResponseEncoding to fall back to a certain encoding, if you know that your target website uses it. To force a certain encoding, disregarding the response headers, use forceResponseEncoding.",
+        "editor": "textfield",
+        "nullable": true
+      },
+      "forceResponseEncoding": {
+        "title": "forceResponseEncoding",
+        "type": "string",
+        "description": "By default this crawler will extract correct encoding from the HTTP response headers. Use forceResponseEncoding to force a certain encoding, disregarding the response headers. To only provide a default for missing encodings, use suggestResponseEncoding.",
+        "editor": "textfield",
+        "nullable": true
+      },
+      "logLevel": {
+        "title": "Log Level",
+        "type": "string",
+        "editor": "select",
+        "description": "Select how detailed should be the logging.",
+        "enum": [
+          "off",
+          "debug",
+          "info",
+          "warn",
+          "error"
+        ],
+        "enumTitles": [
+          "No logging (off)",
+          "Debug and higher priority",
+          "Info and higher priority",
+          "Warning and higher priority",
+          "Error and higher priority"
+        ],
+        "example": "info",
+        "prefill": "info",
+        "default": "info",
+        "nullable": true,
+        "sectionCaption": "Logging (Advanced)",
+        "sectionDescription": "Configure what should be displayed in the log console."
+      }
+    }
+  },
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "fields": {},
+      "views": {}
+    }
+  }
 }
