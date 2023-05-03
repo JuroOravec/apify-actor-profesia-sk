@@ -30,6 +30,8 @@ The data can be downloaded in JSON, JSONL, XML, CSV, Excel, or HTML formats.
 
 
 
+This actor is a robust production-grade solution suitable for businesses and those that need reliability.
+
 - **7 kinds of datasets**
   
   - Scrape details of job offers, companies, industries, locations, professions, languages or partners.
@@ -318,8 +320,7 @@ For details and examples for all input fields, please visit the [Input tab](http
 
 
 You can run Profesia.sk Scraper as is, with the default options, to get a sample of the 
-job offers entries
-(fast mode).
+job offers entries (fast mode).
 
 Otherwise, you can filter by:
 
