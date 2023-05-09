@@ -29,7 +29,7 @@ const inputValidationSchema = Joi.object<ActorInput>({
   jobOfferFilterRemoteWorkType: Joi.string().valid(...WORK_FROM_HOME_TYPE).optional(), // prettier-ignore
   jobOfferFilterLastNDays: Joi.number().min(0).integer().optional(),
   jobOfferCountOnly: Joi.boolean().optional(),
-});
+} satisfies Record<keyof ActorInput, Joi.Schema>);
 
 export const validateInput = (input: ActorInput | null) => {
   Joi.assert(input, inputValidationSchema);
