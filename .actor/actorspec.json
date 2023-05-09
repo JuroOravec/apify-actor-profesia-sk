@@ -50,6 +50,7 @@
         "Remote status (remote, partial, on-site)",
         "Job offer age (in days)"
       ],
+      "filterCompleteness": "some",
       "modes": [
         {
           "name": "fast",
@@ -63,12 +64,20 @@
         }
       ],
       "features": {
+        "limitResultsCount": true,
         "usesBrowser": false,
         "proxySupport": true,
         "configurable": true,
         "regularlyTested": true,
         "privacyCompliance": true,
-        "errorMonitoring": true
+        "errorMonitoring": true,
+        "changeMonitoring": false,
+        "downstreamAutomation": true
+      },
+      "faultTolerance": {
+        "dataLossScope": "entry",
+        "timeLostAvgSec": 1,
+        "timeLostMaxSec": 10
       },
       "privacy": {
         "personalDataFields": [
@@ -214,14 +223,23 @@
       "size": 6200,
       "isDefault": false,
       "filters": [],
+      "filterCompleteness": "full",
       "modes": [],
       "features": {
+        "limitResultsCount": true,
         "usesBrowser": false,
         "proxySupport": true,
         "configurable": true,
         "regularlyTested": true,
         "privacyCompliance": true,
-        "errorMonitoring": true
+        "errorMonitoring": true,
+        "changeMonitoring": false,
+        "downstreamAutomation": true
+      },
+      "faultTolerance": {
+        "dataLossScope": "batch",
+        "timeLostAvgSec": 5,
+        "timeLostMaxSec": 5
       },
       "privacy": {
         "personalDataFields": [],
@@ -265,14 +283,23 @@
       "size": 40,
       "isDefault": false,
       "filters": [],
+      "filterCompleteness": "full",
       "modes": [],
       "features": {
+        "limitResultsCount": true,
         "usesBrowser": false,
         "proxySupport": true,
         "configurable": true,
         "regularlyTested": true,
         "privacyCompliance": true,
-        "errorMonitoring": true
+        "errorMonitoring": true,
+        "changeMonitoring": false,
+        "downstreamAutomation": true
+      },
+      "faultTolerance": {
+        "dataLossScope": "all",
+        "timeLostAvgSec": 5,
+        "timeLostMaxSec": 5
       },
       "privacy": {
         "personalDataFields": [],
@@ -316,14 +343,23 @@
       "size": 200,
       "isDefault": false,
       "filters": [],
+      "filterCompleteness": "full",
       "modes": [],
       "features": {
+        "limitResultsCount": true,
         "usesBrowser": false,
         "proxySupport": true,
         "configurable": true,
         "regularlyTested": true,
         "privacyCompliance": true,
-        "errorMonitoring": true
+        "errorMonitoring": true,
+        "changeMonitoring": false,
+        "downstreamAutomation": true
+      },
+      "faultTolerance": {
+        "dataLossScope": "batch",
+        "timeLostAvgSec": 5,
+        "timeLostMaxSec": 5
       },
       "privacy": {
         "personalDataFields": [],
@@ -369,14 +405,23 @@
       "size": 500,
       "isDefault": false,
       "filters": [],
+      "filterCompleteness": "full",
       "modes": [],
       "features": {
+        "limitResultsCount": true,
         "usesBrowser": false,
         "proxySupport": true,
         "configurable": true,
         "regularlyTested": true,
         "privacyCompliance": true,
-        "errorMonitoring": true
+        "errorMonitoring": true,
+        "changeMonitoring": false,
+        "downstreamAutomation": true
+      },
+      "faultTolerance": {
+        "dataLossScope": "all",
+        "timeLostAvgSec": 5,
+        "timeLostMaxSec": 5
       },
       "privacy": {
         "personalDataFields": [],
@@ -420,14 +465,23 @@
       "size": 30,
       "isDefault": false,
       "filters": [],
+      "filterCompleteness": "full",
       "modes": [],
       "features": {
+        "limitResultsCount": true,
         "usesBrowser": false,
         "proxySupport": true,
         "configurable": true,
         "regularlyTested": true,
         "privacyCompliance": true,
-        "errorMonitoring": true
+        "errorMonitoring": true,
+        "changeMonitoring": false,
+        "downstreamAutomation": true
+      },
+      "faultTolerance": {
+        "dataLossScope": "all",
+        "timeLostAvgSec": 1,
+        "timeLostMaxSec": 1
       },
       "privacy": {
         "personalDataFields": [],
@@ -471,14 +525,23 @@
       "size": 70,
       "isDefault": false,
       "filters": [],
+      "filterCompleteness": "full",
       "modes": [],
       "features": {
+        "limitResultsCount": true,
         "usesBrowser": false,
         "proxySupport": true,
         "configurable": true,
         "regularlyTested": true,
         "privacyCompliance": true,
-        "errorMonitoring": true
+        "errorMonitoring": true,
+        "changeMonitoring": false,
+        "downstreamAutomation": true
+      },
+      "faultTolerance": {
+        "dataLossScope": "all",
+        "timeLostAvgSec": 5,
+        "timeLostMaxSec": 5
       },
       "privacy": {
         "personalDataFields": [],

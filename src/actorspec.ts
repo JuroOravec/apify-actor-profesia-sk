@@ -42,12 +42,15 @@ const modes = [
 ] satisfies DatasetModes[];
 
 const datasetFeatures = {
+  limitResultsCount: true,
   usesBrowser: false,
   proxySupport: true,
   configurable: true,
   regularlyTested: true,
   privacyCompliance: true,
   errorMonitoring: true,
+  changeMonitoring: false,
+  downstreamAutomation: true,
 } satisfies DatasetFeatures;
 
 const actorId = 'profesia-sk-scraper';
@@ -100,8 +103,14 @@ const actorSpec = {
       size: 21000,
       isDefault: true,
       filters,
+      filterCompleteness: 'some',
       modes,
       features: datasetFeatures,
+      faultTolerance: {
+        dataLossScope: 'entry',
+        timeLostAvgSec: 1,
+        timeLostMaxSec: 10,
+      },
       privacy: {
         personalDataFields: ['employerContact', 'phoneNumbers'],
         isPersonalDataRedacted: true,
@@ -200,8 +209,14 @@ const actorSpec = {
       size: 6200,
       isDefault: false,
       filters: [],
+      filterCompleteness: 'full',
       modes: [],
       features: datasetFeatures,
+      faultTolerance: {
+        dataLossScope: 'batch',
+        timeLostAvgSec: 5,
+        timeLostMaxSec: 5,
+      },
       privacy: {
         personalDataFields: [],
         isPersonalDataRedacted: true,
@@ -239,8 +254,14 @@ const actorSpec = {
       size: 40,
       isDefault: false,
       filters: [],
+      filterCompleteness: 'full',
       modes: [],
       features: datasetFeatures,
+      faultTolerance: {
+        dataLossScope: 'all',
+        timeLostAvgSec: 5,
+        timeLostMaxSec: 5,
+      },
       privacy: {
         personalDataFields: [],
         isPersonalDataRedacted: true,
@@ -277,8 +298,14 @@ const actorSpec = {
       size: 200,
       isDefault: false,
       filters: [],
+      filterCompleteness: 'full',
       modes: [],
       features: datasetFeatures,
+      faultTolerance: {
+        dataLossScope: 'batch',
+        timeLostAvgSec: 5,
+        timeLostMaxSec: 5,
+      },
       privacy: {
         personalDataFields: [],
         isPersonalDataRedacted: true,
@@ -317,8 +344,14 @@ const actorSpec = {
       size: 500,
       isDefault: false,
       filters: [],
+      filterCompleteness: 'full',
       modes: [],
       features: datasetFeatures,
+      faultTolerance: {
+        dataLossScope: 'all',
+        timeLostAvgSec: 5,
+        timeLostMaxSec: 5,
+      },
       privacy: {
         personalDataFields: [],
         isPersonalDataRedacted: true,
@@ -355,8 +388,14 @@ const actorSpec = {
       size: 30,
       isDefault: false,
       filters: [],
+      filterCompleteness: 'full',
       modes: [],
       features: datasetFeatures,
+      faultTolerance: {
+        dataLossScope: 'all',
+        timeLostAvgSec: 1,
+        timeLostMaxSec: 1,
+      },
       privacy: {
         personalDataFields: [],
         isPersonalDataRedacted: true,
@@ -393,8 +432,14 @@ const actorSpec = {
       size: 70,
       isDefault: false,
       filters: [],
+      filterCompleteness: 'full',
       modes: [],
       features: datasetFeatures,
+      faultTolerance: {
+        dataLossScope: 'all',
+        timeLostAvgSec: 5,
+        timeLostMaxSec: 5,
+      },
       privacy: {
         personalDataFields: [],
         isPersonalDataRedacted: true,
