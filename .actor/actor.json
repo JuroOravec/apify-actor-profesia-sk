@@ -141,7 +141,6 @@
         "title": "Target number of results",
         "type": "integer",
         "description": "If set, only up to this number of entries will be extracted.\n    The actual number of entries might be higher than this due to multiple pages\n    being scraped at the same time.",
-        "default": 100,
         "prefill": 100,
         "example": 100,
         "minimum": 1,
@@ -176,9 +175,10 @@
       "outputDatasetIdOrName": {
         "title": "Dataset ID or name",
         "type": "string",
-        "description": "By default, data is written to Default dataset.\n    Set this option if you want to write data to non-default dataset.\n    <a href=\"https://docs.apify.com/sdk/python/docs/concepts/storages#opening-named-and-unnamed-storages\">Learn more</a>",
+        "description": "By default, data is written to Default dataset.\n    Set this option if you want to write data to non-default dataset.\n    <a href=\"https://docs.apify.com/sdk/python/docs/concepts/storages#opening-named-and-unnamed-storages\">Learn more</a><br/><br/>\n    <strong>NOTE:<strong> Dataset name can only contain letters 'a' through 'z', the digits '0' through '9', and the hyphen ('-') but only in the middle of the string (e.g. 'my-value-1')",
         "editor": "textfield",
         "example": "mIJVZsRQrDQf4rUAf",
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$",
         "nullable": true,
         "sectionCaption": "Output, Dataset & Integrations"
       },
@@ -352,10 +352,11 @@
         "title": "Error reporting dataset ID",
         "type": "string",
         "editor": "textfield",
-        "description": "Apify dataset ID or name to which errors should be captured.<br/><br/>\n    Default: `'REPORTING'`.",
+        "description": "Apify dataset ID or name to which errors should be captured.<br/><br/>\n    Default: `'REPORTING'`.<br/><br/>\n    <strong>NOTE:<strong> Dataset name can only contain letters 'a' through 'z', the digits '0' through '9', and the hyphen ('-') but only in the middle of the string (e.g. 'my-value-1')",
         "example": "REPORTING",
         "prefill": "REPORTING",
         "default": "REPORTING",
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$",
         "nullable": true
       },
       "errorSendToSentry": {
