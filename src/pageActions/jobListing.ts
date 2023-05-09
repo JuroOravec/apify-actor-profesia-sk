@@ -1,8 +1,7 @@
-import { Actor } from 'apify';
 import type { Log } from 'crawlee';
 import type { OptionsInit } from 'got-scraping';
 import { load as loadCheerio } from 'cheerio';
-import { DOMLib, cheerioDOMLib } from 'apify-actor-utils';
+import { DOMLib, checkEntriesCount, cheerioDOMLib } from 'apify-actor-utils';
 
 import type {
   EmploymentType,
@@ -54,7 +53,7 @@ const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string
 export const jobListingPageActions = {
   // prettier-ignore
   extractJobOffers: async <T>({ domLib: origDomLib, log, listingPageNum = null, onScheduleNextPage, input, onFetchHTML, onData }: ExtractJobOffersOptions<T>) => {
-    const { jobOfferCountOnly, outputDatasetIdOrName } = input;
+    const { jobOfferCountOnly, outputDatasetIdOrName, jobOfferFilterMaxCount } = input;
     const origUrl = origDomLib.url();
 
     // Navigate to URL that has filters applied
@@ -88,34 +87,26 @@ export const jobListingPageActions = {
       log.info('Stopping scraping - no entries found. We assume this is the end of pagination');
       return;
     }
-
-    const getDatasetCount = async (datasetNameOrId?: string, { log }: { log?: Log } = {}) => {
-      log?.debug('Opening dataset');
-      const dataset = await Actor.openDataset(datasetNameOrId);
-      log?.debug('Obtaining dataset entries count');
-      const datasetInfo = await dataset.getInfo();
-      const count = datasetInfo?.itemCount ?? null;
-      log?.debug(`Done obtaining dataset entries count (${count})`);
-      return count;
-    };
-
-    const itemCountBefore = await getDatasetCount(outputDatasetIdOrName, { log });
-    if (typeof itemCountBefore !== 'number') {
-      log.warning('Failed to get count of entries in dataset (AKA already collected entries). We currently use this info to know how many items were scraped. This scraper might scrape more entries than was set.'); // prettier-ignore
-    }
-
-    const { entries, isLimitReached } = jobListingMethods.shortenEntriesToMaxLen({ entries: unadjustedEntries, input, itemsCount: itemCountBefore, listingPageNum }); // prettier-ignore
+    
+    // If limit reached, shorten the array as needed
+    const { limitReached, overflow } = await checkEntriesCount({
+      currBatchCount: unadjustedEntries.length,
+      maxCount: jobOfferFilterMaxCount,
+      datasetNameOrId: outputDatasetIdOrName,
+      customItemCount: (listingPageNum ?? 1) * 20,
+    }, { log });
+    const entries = !limitReached ? unadjustedEntries : unadjustedEntries.slice(0, -1 * overflow);
 
     // Schedule the next page.
     // NOTE: We do this BEFORE the onData callback, so the new page can be scraped in parallel
     // while this page might still be scraping details of entries.
-    if (!isLimitReached && entries.length) {
+    if (!limitReached && entries.length) {
       const nextPageUrl = jobListingMethods.getNextPageUrl({ url: newUrl, log });
       log.info('Scheduling next pagination page for scraping');
       await onScheduleNextPage(nextPageUrl);
       log.info('Done scheduling next pagination page for scraping');
     } else {
-      if (isLimitReached) log.info('Stopping pagination - already have max entries');
+      if (limitReached) log.info('Stopping pagination - already have max entries');
     }
 
     log.info(`Calling callback with ${entries.length} extracted entries`);
@@ -261,37 +252,6 @@ export const jobListingMethods = {
     }
 
     return urlObj.href;
-  },
-
-  shortenEntriesToMaxLen: ({
-    input,
-    entries,
-    itemsCount,
-    listingPageNum,
-  }: {
-    input: ActorInput;
-    entries: SimpleProfesiaSKJobOfferItem[];
-    itemsCount: number | null;
-    listingPageNum: number | null;
-  }) => {
-    const { jobOfferFilterMaxCount } = input;
-
-    if ((itemsCount == null && listingPageNum == null) || jobOfferFilterMaxCount == null) {
-      return { entries, isLimitReached: false };
-    }
-
-    // Check if we've reached the limit for max entries
-    let isLimitReached = false;
-    // Use count of items already in dataset to check if limit reached
-    if (!isLimitReached && itemsCount != null && itemsCount + entries.length >= jobOfferFilterMaxCount) isLimitReached = true; // prettier-ignore
-    // Use page offset to check if limit reached (20 entries per page)
-    if (!isLimitReached && listingPageNum != null && listingPageNum * 20 >= jobOfferFilterMaxCount) isLimitReached = true; // prettier-ignore
-
-    // If limit reached, shorten the array as needed
-    const adjustedEntries = !isLimitReached
-      ? entries
-      : entries.slice(0, jobOfferFilterMaxCount - entries.length);
-    return { isLimitReached, entries: adjustedEntries };
   },
 
   getNextPageUrl: ({ url, log }: { url: string; log: Log }) => {
