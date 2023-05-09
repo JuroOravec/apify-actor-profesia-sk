@@ -20,7 +20,7 @@ const jobListings = [
   { name: 'main page (redirect to job offers)', url: 'https://www.profesia.sk', numOfAssertCalls: 1 },
   { name: 'main job offers listing', url: 'https://www.profesia.sk/praca', numOfAssertCalls: 1  },
   { name: 'listing with specific filters', url: 'https://www.profesia.sk/praca/bratislavsky-kraj/?count_days=21&remote_work=1&salary=500&salary_period=m&search_anywhere=tech', numOfAssertCalls: 1  },
-  { name: 'company listing', url: 'https://www.profesia.sk/praca/123kurier/C238652', numOfAssertCalls: 1  },
+  { name: 'company listing', url: 'https://www.profesia.sk/praca/ais-automotive-interior-systems-slovakia/C201052', numOfAssertCalls: 1  },
   { name: 'profession listing', url: 'https://www.profesia.sk/praca/account-executive/', numOfAssertCalls: 1  },
   { name: 'language listing', url: 'https://www.profesia.sk/praca/anglicky-jazyk/', numOfAssertCalls: 1  },
   { name: 'location listing', url: 'https://www.profesia.sk/praca/okres-pezinok/', numOfAssertCalls: 1  },
