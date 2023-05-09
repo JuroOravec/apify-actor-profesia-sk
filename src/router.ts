@@ -5,6 +5,7 @@ import {
   cheerioDOMLib,
   RouteHandler,
   pushData,
+  PushDataOptions,
 } from 'apify-actor-utils';
 
 import { GenericListEntry, jobRelatedListsPageActions } from './pageActions/jobRelatedLists';
@@ -114,7 +115,21 @@ export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, RouteLa
 ]);
 
 export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorInput) => {
-  const { jobOfferDetailed, includePersonalData } = input;
+  const {
+    jobOfferDetailed,
+    includePersonalData,
+    outputPickFields,
+    outputDatasetIdOrName,
+    outputRenameFields,
+  } = input;
+
+  const pushDataOptions = {
+    includeMetadata: true,
+    showPrivate: includePersonalData,
+    pickKeys: outputPickFields,
+    datasetIdOrName: outputDatasetIdOrName,
+    remapKeys: outputRenameFields,
+  } satisfies Omit<PushDataOptions<any>, 'privacyMask'>;
 
   return {
     JOB_LISTING: async (ctx) => {
@@ -123,11 +138,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
       const onData = async (entries: SimpleProfesiaSKJobOfferItem[]) => {
         // If not detailed, just save the data
         if (!jobOfferDetailed) {
-          await pushData(entries, ctx, {
-            includeMetadata: true,
-            showPrivate: includePersonalData,
-            privacyMask: {},
-          });
+          await pushData(entries, ctx, { ...pushDataOptions, privacyMask: {} });
           return;
         }
 
@@ -151,8 +162,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
           // Push the data after each scraped page to limit the chance of losing data
           await Promise.all([
             pushData(jobDetail, ctx, {
-              includeMetadata: true,
-              showPrivate: includePersonalData,
+              ...pushDataOptions,
               privacyMask: {
                 employerContact: () => true,
                 phoneNumbers: () => true,
@@ -192,8 +202,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
       const domLib = cheerioDOMLib(ctx.$, request.loadedUrl || request.url);
       const entry = jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: request.userData?.offer }); // prettier-ignore
       await pushData(entry, ctx, {
-        includeMetadata: true,
-        showPrivate: includePersonalData,
+        ...pushDataOptions,
         privacyMask: {
           employerContact: () => true,
           phoneNumbers: () => true,
@@ -206,8 +215,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
 
       const onData = async (data: GenericListEntry[]) => {
         await pushData(data, ctx, {
-          includeMetadata: true,
-          showPrivate: includePersonalData,
+          ...pushDataOptions,
           privacyMask: {},
         });
       };
@@ -232,8 +240,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
       const entries = partnersDOMActions.extractPartnerEntries({ domLib, log: ctx.log });
 
       await pushData(entries, ctx, {
-        includeMetadata: true,
-        showPrivate: includePersonalData,
+        ...pushDataOptions,
         privacyMask: {},
       });
     },

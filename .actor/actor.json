@@ -173,6 +173,62 @@
         "nullable": true,
         "sectionCaption": "Privacy & Data governance (GDPR)"
       },
+      "outputDatasetIdOrName": {
+        "title": "Dataset ID or name",
+        "type": "string",
+        "description": "By default, data is written to Default dataset.\n    Set this option if you want to write data to non-default dataset.\n    <a href=\"https://docs.apify.com/sdk/python/docs/concepts/storages#opening-named-and-unnamed-storages\">Learn more</a>",
+        "editor": "textfield",
+        "example": "mIJVZsRQrDQf4rUAf",
+        "nullable": true,
+        "sectionCaption": "Output, Dataset & Integrations"
+      },
+      "outputPickFields": {
+        "title": "Rename dataset fields",
+        "type": "array",
+        "description": "Select a subset of fields of an entry that will be pushed to the dataset.<br/><br/>\n    If not set, all fields on an entry will be pushed to the dataset.<br/><br/>\n    This is done before `outputRenameFields`.<br/><br/>\n    Keys can be nested, e.g. `\"someProp.value[0]\"`.\n    Nested path is resolved using <a href=\"https://lodash.com/docs/4.17.15#get\">Lodash.get()</a>.",
+        "editor": "stringList",
+        "example": [
+          "fieldName",
+          "another.nested[0].field"
+        ],
+        "nullable": true
+      },
+      "outputRenameFields": {
+        "title": "Rename dataset fields",
+        "type": "object",
+        "description": "Rename fields (columns) of the output data.<br/><br/>\n    If not set, all fields will have their original names.<br/><br/>\n    This is done after `outputPickFields`.<br/><br/>\n    Keys can be nested, e.g. `\"someProp.value[0]\"`.\n    Nested path is resolved using <a href=\"https://lodash.com/docs/4.17.15#get\">Lodash.get()</a>.",
+        "editor": "json",
+        "example": {
+          "oldFieldName": "newFieldName"
+        },
+        "nullable": true
+      },
+      "metamorphActorId": {
+        "title": "Metamorph actor ID - metamorph to another actor at the end",
+        "type": "string",
+        "description": "Use this option if you want to run another actor with the same dataset after this actor has finished (AKA metamorph into another actor). <ahref=\"https://docs.apify.com/sdk/python/docs/concepts/interacting-with-other-actors#actormetamorph\">Learn more</a> <br/><br/>New actor is identified by its ID, e.g. \"apify/web-scraper\".",
+        "editor": "textfield",
+        "example": "apify/web-scraper",
+        "nullable": true
+      },
+      "metamorphActorBuild": {
+        "title": "Metamorph actor build",
+        "type": "string",
+        "description": "Tag or number of the target actor build to metamorph into (e.g. 'beta' or '1.2.345')",
+        "editor": "textfield",
+        "example": "1.2.345",
+        "nullable": true
+      },
+      "metamorphActorInput": {
+        "title": "Metamorph actor input",
+        "type": "object",
+        "description": "Input object passed to the follow-up (metamorph) actor. <ahref=\"https://docs.apify.com/sdk/python/docs/concepts/interacting-with-other-actors#actormetamorph\">Learn more</a>",
+        "editor": "json",
+        "example": {
+          "uploadDatasetToGDrive": true
+        },
+        "nullable": true
+      },
       "maxRequestRetries": {
         "title": "maxRequestRetries",
         "type": "integer",
@@ -289,8 +345,27 @@
         "prefill": "info",
         "default": "info",
         "nullable": true,
-        "sectionCaption": "Logging (Advanced)",
-        "sectionDescription": "Configure what should be displayed in the log console."
+        "sectionCaption": "Logging & Error handling (Advanced)",
+        "sectionDescription": "Configure how to handle errors or what should be displayed in the log console."
+      },
+      "errorReportingDatasetId": {
+        "title": "Error reporting dataset ID",
+        "type": "string",
+        "editor": "textfield",
+        "description": "Apify dataset ID or name to which errors should be captured.<br/><br/>\n    Default: `'REPORTING'`.",
+        "example": "REPORTING",
+        "prefill": "REPORTING",
+        "default": "REPORTING",
+        "nullable": true
+      },
+      "errorSendToSentry": {
+        "title": "Send errors to Sentry",
+        "type": "boolean",
+        "editor": "checkbox",
+        "description": "Whether to send actor error reports to <a href=\"https://sentry.io/\">Sentry</a>.<br/><br/>\n    This info is used by the author of this actor to identify broken integrations,\n    and track down and fix issues.",
+        "example": true,
+        "default": true,
+        "nullable": true
       }
     }
   },
