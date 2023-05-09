@@ -54,7 +54,7 @@ const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string
 export const jobListingPageActions = {
   // prettier-ignore
   extractJobOffers: async <T>({ domLib: origDomLib, log, listingPageNum = null, onScheduleNextPage, input, onFetchHTML, onData }: ExtractJobOffersOptions<T>) => {
-    const { jobOfferCountOnly } = input;
+    const { jobOfferCountOnly, outputDatasetIdOrName } = input;
     const origUrl = origDomLib.url();
 
     // Navigate to URL that has filters applied
@@ -99,7 +99,7 @@ export const jobListingPageActions = {
       return count;
     };
 
-    const itemCountBefore = await getDatasetCount(undefined, { log });
+    const itemCountBefore = await getDatasetCount(outputDatasetIdOrName, { log });
     if (typeof itemCountBefore !== 'number') {
       log.warning('Failed to get count of entries in dataset (AKA already collected entries). We currently use this info to know how many items were scraped. This scraper might scrape more entries than was set.'); // prettier-ignore
     }
