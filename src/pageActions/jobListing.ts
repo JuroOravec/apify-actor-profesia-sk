@@ -89,9 +89,17 @@ export const jobListingPageActions = {
       return;
     }
 
-    log.debug('Obtaining dataset entries count');
-    const itemCountBefore = (await (await Actor.openDataset()).getInfo())?.itemCount ?? null;
-    log.debug(`Done obtaining dataset entries count (${itemCountBefore})`);
+    const getDatasetCount = async (datasetNameOrId?: string, { log }: { log?: Log } = {}) => {
+      log?.debug('Opening dataset');
+      const dataset = await Actor.openDataset(datasetNameOrId);
+      log?.debug('Obtaining dataset entries count');
+      const datasetInfo = await dataset.getInfo();
+      const count = datasetInfo?.itemCount ?? null;
+      log?.debug(`Done obtaining dataset entries count (${count})`);
+      return count;
+    };
+
+    const itemCountBefore = await getDatasetCount(undefined, { log });
     if (typeof itemCountBefore !== 'number') {
       log.warning('Failed to get count of entries in dataset (AKA already collected entries). We currently use this info to know how many items were scraped. This scraper might scrape more entries than was set.'); // prettier-ignore
     }
