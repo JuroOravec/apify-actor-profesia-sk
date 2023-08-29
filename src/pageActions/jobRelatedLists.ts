@@ -24,7 +24,7 @@ interface RawExtractedLink {
   lastHeadingTitle: string | null;
 }
 
-interface ExtractEntriesOptions<TData, TEl extends DOMLib<object, any>> {
+interface ExtractEntriesOptions<TData, TEl extends DOMLib<any, any>> {
   domLib: TEl;
   log: Log;
   onFetchHTML: (overrideOptions?: Partial<OptionsInit>) => Promise<string>;
@@ -47,7 +47,7 @@ export const jobRelatedListsPageActions = {
    * - professions - https://www.profesia.sk/praca/zoznam-pozicii/
    * - language requirements - https://www.profesia.sk/praca/zoznam-jazykovych-znalosti/
    */
-  extractGenericLinks: async <T extends DOMLib<object, any>>(
+  extractGenericLinks: async <T extends DOMLib<any, any>>(
     options: ExtractEntriesOptions<GenericListEntry, T>
   ) => {
     options.log.info('Starting extracting entries');
@@ -66,7 +66,7 @@ export const jobRelatedListsPageActions = {
   },
 
   /** Extract location links from https://www.profesia.sk/praca/zoznam-lokalit/ */
-  extractLocationsLinks: async <T extends DOMLib<object, any>>(
+  extractLocationsLinks: async <T extends DOMLib<any, any>>(
     options: ExtractEntriesOptions<LocationListEntry, T>
   ) => {
     options.log.info('Starting extracting partners entries');
@@ -90,7 +90,7 @@ export const jobRelatedListsPageActions = {
     options.log.info('Done extracting location entries');
   },
 
-  extractEntries: async <T extends DOMLib<object, any>>({
+  extractEntries: async <T extends DOMLib<any, any>>({
     domLib,
     onData,
     onFetchHTML,
@@ -123,13 +123,7 @@ export const jobRelatedListsPageActions = {
 };
 
 export const jobRelatedListsDOMActions = {
-  extractNavTabs: async <T extends DOMLib<object, any>>({
-    domLib,
-    log,
-  }: {
-    domLib: T;
-    log: Log;
-  }) => {
+  extractNavTabs: async <T extends DOMLib<any, any>>({ domLib, log }: { domLib: T; log: Log }) => {
     log.info('Collecting tabs information');
     const rootEl = await domLib.root();
 

@@ -18,7 +18,7 @@ export interface PartnerEntry {
 export const partnersDOMActions = {
   /** Extract partners links from https://www.profesia.sk/partneri */
   // prettier-ignore
-  extractPartnerEntries: async <T extends DOMLib<object, object>>({ domLib, log }: { domLib: T; log: Log }) => {
+  extractPartnerEntries: async <T extends DOMLib<any, any>>({ domLib, log }: { domLib: T; log: Log }) => {
     log.info('Starting extracting partners entries');
     const rootEl = await domLib.root();
     const url = await domLib.url();

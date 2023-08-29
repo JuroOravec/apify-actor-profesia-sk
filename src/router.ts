@@ -4,7 +4,6 @@ import {
   createCheerioRouteMatchers,
   cheerioDOMLib,
   RouteHandler,
-  pushData,
   PushDataOptions,
   ActorRouterContext,
   apifyIO,
@@ -126,20 +125,10 @@ export const routes = createCheerioRouteMatchers<
 ]);
 
 export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorInput) => {
-  const {
-    jobOfferDetailed,
-    includePersonalData,
-    outputPickFields,
-    outputDatasetId,
-    outputRenameFields,
-  } = input;
+  const { jobOfferDetailed } = input;
 
   const pushDataOptions = {
     includeMetadata: true,
-    showPrivate: includePersonalData,
-    pickKeys: outputPickFields,
-    datasetId: outputDatasetId,
-    remapKeys: outputRenameFields,
   } satisfies Omit<PushDataOptions<any>, 'privacyMask'>;
 
   return {
@@ -149,7 +138,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
       const onData = async (entries: SimpleProfesiaSKJobOfferItem[]) => {
         // If not detailed, just save the data
         if (!jobOfferDetailed) {
-          await pushData(entries, ctx, { ...pushDataOptions, privacyMask: {} });
+          await ctx.actor.pushData(entries, ctx, { ...pushDataOptions, privacyMask: {} });
           return;
         }
 
@@ -172,7 +161,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
 
           // Push the data after each scraped page to limit the chance of losing data
           await Promise.all([
-            pushData(jobDetail, ctx, {
+            ctx.actor.pushData(jobDetail, ctx, {
               ...pushDataOptions,
               privacyMask: {
                 employerContact: () => true,
@@ -195,7 +184,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
         onFetchHTML: (opts) => ctx.sendRequest(opts).then((d) => d.body),
         onData,
         onScheduleNextPage: async (url) => {
-          await ctx.crawler.addRequests([
+          await ctx.actor.pushRequests([
             { url, label: ROUTE_LABEL_ENUM.JOB_LISTING, userData: { listingPageNum: listingPageNum + 1 } }, // prettier-ignore
           ]);
         },
@@ -211,7 +200,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
 
       const domLib = cheerioDOMLib(ctx.$.root(), request.loadedUrl || request.url);
       const entry = await jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: request.userData?.offer }); // prettier-ignore
-      await pushData(entry, ctx, {
+      await ctx.actor.pushData(entry, ctx, {
         ...pushDataOptions,
         privacyMask: {
           employerContact: () => true,
@@ -224,14 +213,14 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
       const { request, log } = ctx;
 
       const onData = async (data: GenericListEntry[]) => {
-        await pushData(data, ctx, {
+        await ctx.actor.pushData(data, ctx, {
           ...pushDataOptions,
           privacyMask: {},
         });
       };
 
       const url = request.loadedUrl || request.url;
-      const domLib = cheerioDOMLib(ctx.$, url);
+      const domLib = cheerioDOMLib(ctx.$.root(), url);
       const isLocationsPage = url.match(/[\W]profesia\.sk\/praca\/zoznam-lokalit/i); // prettier-ignore
       const extractFn = isLocationsPage
         ? jobRelatedListsPageActions.extractLocationsLinks
@@ -245,14 +234,14 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
     },
 
     PARTNERS: async (ctx) => {
-      const domLib = cheerioDOMLib(ctx.$, ctx.request.loadedUrl || ctx.request.url);
+      const domLib = cheerioDOMLib(ctx.$.root(), ctx.request.loadedUrl || ctx.request.url);
 
-      const entries = partnersDOMActions.extractPartnerEntries({ domLib, log: ctx.log });
+      const entries = await partnersDOMActions.extractPartnerEntries({ domLib, log: ctx.log });
 
-      await pushData(entries, ctx, {
+      await ctx.actor.pushData(entries, ctx, {
         ...pushDataOptions,
         privacyMask: {},
       });
     },
-  } satisfies Record<RouteLabel, RouteHandler<Ctx>>;
+  } satisfies Record<RouteLabel, RouteHandler<Ctx, ProfesiaRouterContext>>;
 };
