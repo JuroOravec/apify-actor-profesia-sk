@@ -1,9 +1,9 @@
 import type { Log } from 'apify';
 import { load as loadCheerio } from 'cheerio';
 import type { OptionsInit } from 'got-scraping';
-import { DOMLib, cheerioDOMLib } from 'apify-actor-utils';
+import { DOMLib, cheerioDOMLib } from 'crawlee-one';
 
-import { serialAsyncMap } from '../utils/async';
+import { serialAsyncFilter, serialAsyncMap } from '../utils/async';
 import type { MaybePromise } from '../utils/types.js';
 
 export interface GenericListEntry {
@@ -24,8 +24,8 @@ interface RawExtractedLink {
   lastHeadingTitle: string | null;
 }
 
-interface ExtractEntriesOptions<TData, TEl> {
-  domLib: DOMLib<TEl>;
+interface ExtractEntriesOptions<TData, TEl extends DOMLib<object, any>> {
+  domLib: TEl;
   log: Log;
   onFetchHTML: (overrideOptions?: Partial<OptionsInit>) => Promise<string>;
   onData: (data: TData[], tabIndex: number) => MaybePromise<void>;
@@ -47,7 +47,9 @@ export const jobRelatedListsPageActions = {
    * - professions - https://www.profesia.sk/praca/zoznam-pozicii/
    * - language requirements - https://www.profesia.sk/praca/zoznam-jazykovych-znalosti/
    */
-  extractGenericLinks: async <T>(options: ExtractEntriesOptions<GenericListEntry, T>) => {
+  extractGenericLinks: async <T extends DOMLib<object, any>>(
+    options: ExtractEntriesOptions<GenericListEntry, T>
+  ) => {
     options.log.info('Starting extracting entries');
     await jobRelatedListsPageActions.extractEntries({
       ...options,
@@ -64,7 +66,9 @@ export const jobRelatedListsPageActions = {
   },
 
   /** Extract location links from https://www.profesia.sk/praca/zoznam-lokalit/ */
-  extractLocationsLinks: async <T>(options: ExtractEntriesOptions<LocationListEntry, T>) => {
+  extractLocationsLinks: async <T extends DOMLib<object, any>>(
+    options: ExtractEntriesOptions<LocationListEntry, T>
+  ) => {
     options.log.info('Starting extracting partners entries');
     await jobRelatedListsPageActions.extractEntries({
       ...options,
@@ -86,17 +90,17 @@ export const jobRelatedListsPageActions = {
     options.log.info('Done extracting location entries');
   },
 
-  extractEntries: async <T>({
+  extractEntries: async <T extends DOMLib<object, any>>({
     domLib,
     onData,
     onFetchHTML,
     log,
   }: ExtractEntriesOptions<RawExtractedLink, T>) => {
-    const pageNavTexts = jobRelatedListsDOMActions.extractNavTabs({ domLib, log }); // prettier-ignore
+    const pageNavTexts = await jobRelatedListsDOMActions.extractNavTabs({ domLib, log }); // prettier-ignore
     // If there's no navigation on the page, we still want to run the next section of code once
     const maybePagesNavTabs = pageNavTexts.length ? pageNavTexts : [null];
 
-    const baseUrl = domLib.url();
+    const baseUrl = await domLib.url();
     if (!baseUrl) throw Error('Cannot fetch entries for individual tabs - URL is missing');
 
     await serialAsyncMap(maybePagesNavTabs, async (tabText, tabIndex) => {
@@ -108,9 +112,8 @@ export const jobRelatedListsPageActions = {
       const tabPageHTML = await onFetchHTML({ url: urlObj });
       log.info(`Extracting entries for tab ${tabText}`);
 
-      const tabCheerioDom = loadCheerio(tabPageHTML);
-      const tabDomLib = cheerioDOMLib(tabCheerioDom, baseUrl);
-      const entries = jobRelatedListsDOMActions.extractEntriesOnTab({ domLib: tabDomLib, log }); // prettier-ignore
+      const tabDomLib = cheerioDOMLib(loadCheerio(tabPageHTML).root(), baseUrl);
+      const entries = await jobRelatedListsDOMActions.extractEntriesOnTab({ domLib: tabDomLib, log }); // prettier-ignore
 
       log.info(`Calling callback with ${entries.length} entries extracted from tab ${tabText}`);
       await onData(entries, tabIndex);
@@ -120,52 +123,67 @@ export const jobRelatedListsPageActions = {
 };
 
 export const jobRelatedListsDOMActions = {
-  extractNavTabs: <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }) => {
+  extractNavTabs: async <T extends DOMLib<object, any>>({
+    domLib,
+    log,
+  }: {
+    domLib: T;
+    log: Log;
+  }) => {
     log.info('Collecting tabs information');
-    const rootEl = domLib.root();
+    const rootEl = await domLib.root();
 
     // Some pages have navigation to split up the links, some don't
-    const pageNavTabEls = domLib.findMany(rootEl, '.nav-tabs a');
-    const pageNavTexts = pageNavTabEls.map((el) => domLib.text(el));
+    const pageNavTabEls = (await rootEl?.findMany('.nav-tabs a')) ?? [];
+    const pageNavTexts = (await serialAsyncMap(pageNavTabEls, (el) => el.text())).filter(
+      Boolean
+    ) as string[];
     log.info(`Found ${pageNavTexts.length} tabs`);
     return pageNavTexts;
   },
 
-  extractEntriesOnTab: <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }) => {
+  extractEntriesOnTab: async <T extends DOMLib<any, any>>({
+    domLib,
+    log,
+  }: {
+    domLib: T;
+    log: Log;
+  }) => {
     log.info('Starting extracting tab content entries');
-    const rootEl = domLib.root();
-    const baseUrl = domLib.url();
+    const rootEl = await domLib.root();
+    const baseUrl = await domLib.url();
 
-    const linksContainer = domLib.findOne(rootEl, 'h1', (el) => domLib.parent(el));
-    const linkEls = domLib.findMany(linksContainer, '.card a').filter((linkEl) => {
+    const linksContainer = await (await rootEl?.findOne('h1'))?.parent();
+    const linkCardEls = (await linksContainer?.findMany('.card a')) ?? [];
+    const linkEls = await serialAsyncFilter(linkCardEls, async (linkEl) => {
       // Ignore anchor links, like the alphabet links here
       // https://www.profesia.sk/praca/zoznam-spolocnosti/
-      const href = domLib.href(linkEl, { baseUrl });
-      return href ? !domLib.href(linkEl, { baseUrl })?.startsWith('#') : null;
+      const href = await linkEl.href({ baseUrl });
+      return href ? !href?.startsWith('#') : null;
     });
 
     let lastHeadingTitle: string | null;
-    const entries = linkEls.map((linkEl): RawExtractedLink => {
-      const url = domLib.href(linkEl, { baseUrl });
-      const isHeading = domLib.findOne(linkEl, 'h2');
+    const entries = await serialAsyncMap(linkEls, async (linkEl) => {
+      const url = await linkEl.href({ baseUrl });
+      const isHeading = await linkEl.findOne('h2');
 
       let count: number;
       let name: string | null;
 
       if (isHeading) {
         // Get count
-        const countEl = domLib.findOne(linkEl, 'span');
-        count = domLib.textAsNumber(countEl, { mode: 'int', removeWhitespace: true }) ?? 0;
+        const countEl = await linkEl.findOne('span');
+        count = (await countEl?.textAsNumber({ mode: 'int', removeWhitespace: true })) ?? 0;
         // Remove the span, so we can then easily get the name
-        domLib.remove(countEl);
-        name = lastHeadingTitle = domLib.text(linkEl);
+        await countEl?.remove();
+        name = lastHeadingTitle = await linkEl.text();
       } else {
-        name = domLib.text(linkEl);
-        const countEl = domLib.parent(linkEl, (el) => domLib.findOne(el, 'span'));
-        count = domLib.textAsNumber(countEl, { mode: 'int', removeWhitespace: true }) ?? 0;
+        name = await linkEl.text();
+        const countEl = await (await linkEl.parent())?.findOne('span');
+        count = (await countEl?.textAsNumber({ mode: 'int', removeWhitespace: true })) ?? 0;
       }
 
-      return { url, name, count, lastHeadingTitle };
+      return { url, name, count, lastHeadingTitle } satisfies RawExtractedLink;
     });
 
     log.info(`Found ${entries.length} entries.`);

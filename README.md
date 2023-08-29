@@ -7,7 +7,7 @@ Apify actor scraper for profesia.sk
 For more info see:
 
 - <https://apify.com/jurooravec/profesia-sk-scraper>
-- <https://github.com/JuroOravec/apify-actor-utils>
+- <https://github.com/JuroOravec/crawlee-one>
 - <https://docs.apify.com/platform/actors/development>
 
 ## Checklist

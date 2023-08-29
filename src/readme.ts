@@ -1,10 +1,10 @@
-import { ApifyReadmeTemplatesOverrides, renderReadme } from 'apify-actor-utils';
+import { ApifyReadmeTemplatesOverrides, renderApifyReadme } from 'crawlee-one';
 
 import actorSpec from './actorspec';
 
 const templates = {
   input: {
-    maxCount: 'jobOfferFilterMaxCount',
+    maxCount: 'outputMaxEntries',
     privacyName: 'Include personal data',
   },
 
@@ -97,4 +97,4 @@ Hence you can e.g. use Profesia.sk Scraper to dynamically check for existence of
   },
 } satisfies ApifyReadmeTemplatesOverrides;
 
-renderReadme({ filepath: './.actor/README.md', actorSpec, templates });
+renderApifyReadme({ filepath: './.actor/README.md', actorSpec, templates });

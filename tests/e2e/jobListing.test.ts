@@ -1,6 +1,6 @@
 import { describe, it, vi, beforeEach, expect } from 'vitest';
 import Joi from 'joi';
-import { runActorTest } from 'apify-actor-utils';
+import { runCrawlerTest } from 'crawlee-one';
 
 import {
   simpleJobOfferValidation,
@@ -13,7 +13,7 @@ import { sortUrl } from '../../src/utils/url';
 import { run } from '../../src/actor';
 import type { ActorInput } from '../../src/config';
 
-const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
+const runCrawler = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
 // prettier-ignore
 const jobListings = [
@@ -48,10 +48,10 @@ describe(
     jobListings.forEach(({ name, url, numOfAssertCalls }) => {
       it(`extracts job offers from "${name}"`, () => {
         expect.assertions(numOfAssertCalls);
-        return runActorTest<any, ActorInput>({
+        return runCrawlerTest<any, ActorInput>({
           vi,
-          input: { startUrls: [url], jobOfferFilterMaxCount: 21, includePersonalData: true },
-          runActor,
+          input: { startUrls: [url], outputMaxEntries: 21, includePersonalData: true },
+          runCrawler,
           onPushData: async (data) => {
             expect(data.length).toBeGreaterThan(0);
             data.forEach((d) => Joi.assert(d, simpleJobOfferValidation));
@@ -62,12 +62,12 @@ describe(
 
     it('configures listing filters based on actor input', () => {
       expect.assertions(2);
-      return runActorTest<any, ActorInput>({
+      return runCrawlerTest<any, ActorInput>({
         vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
           jobOfferFilterQuery: 'asis',
-          jobOfferFilterMaxCount: 21,
+          outputMaxEntries: 21,
           jobOfferFilterMinSalaryValue: 6,
           jobOfferFilterMinSalaryPeriod: 'hour',
           jobOfferFilterEmploymentType: 'fte',
@@ -75,7 +75,7 @@ describe(
           jobOfferFilterLastNDays: 70,
           includePersonalData: true,
         },
-        runActor,
+        runCrawler,
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[], done) => {
           expect(data.length).toBeGreaterThan(0);
           data.forEach((d) => Joi.assert(d, simpleJobOfferValidation));
@@ -87,14 +87,14 @@ describe(
 
     it('Only prints the count if jobOfferCountOnly=true', () => {
       expect.assertions(2);
-      return runActorTest<any, ActorInput>({
+      return runCrawlerTest<any, ActorInput>({
         vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
           jobOfferCountOnly: true,
           includePersonalData: true,
         },
-        runActor,
+        runCrawler,
         onPushData: async () => {
           throw Error('No data should be returned on jobOfferCountOnly=true');
         },
@@ -110,14 +110,14 @@ describe(
 
     it('Does not enqueue job offer details URLs if jobOfferDetailed=false', () => {
       expect.assertions(3);
-      return runActorTest<any, ActorInput>({
+      return runCrawlerTest<any, ActorInput>({
         vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
-          jobOfferFilterMaxCount: 3,
+          outputMaxEntries: 3,
           includePersonalData: true,
         },
-        runActor,
+        runCrawler,
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[]) => {
           expect(data.length).toBeGreaterThan(0);
           data.forEach((d) => Joi.assert(d, simpleJobOfferValidation));
@@ -134,15 +134,15 @@ describe(
 
     it('Enqueues job offer details URLs if jobOfferDetailed=true', () => {
       expect.assertions(8);
-      return runActorTest<any, ActorInput>({
+      return runCrawlerTest<any, ActorInput>({
         vi,
         input: {
           startUrls: ['https://www.profesia.sk/praca'],
           jobOfferDetailed: true,
-          jobOfferFilterMaxCount: 3,
+          outputMaxEntries: 3,
           includePersonalData: true,
         },
-        runActor,
+        runCrawler,
         onPushData: async (data: SimpleProfesiaSKJobOfferItem[]) => {
           expect(data.length).toBeGreaterThan(0);
           data.forEach((d) => Joi.assert(d, customJobOfferValidation));

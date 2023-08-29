@@ -1,6 +1,6 @@
 import { describe, it, vi, beforeEach, expect } from 'vitest';
 import Joi from 'joi';
-import { runActorTest } from 'apify-actor-utils';
+import { runCrawlerTest } from 'crawlee-one';
 
 import { genericEntryValidation, locationEntryValidation } from '../utils/assert';
 import { run } from '../../src/actor';
@@ -8,7 +8,7 @@ import { ROUTE_LABEL_ENUM } from '../../src/types';
 import type { ActorInput } from '../../src/config';
 
 const log = (...args) => console.log(...args);
-const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
+const runCrawler = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
 // prettier-ignore
 const jobRelatedLists = [
@@ -36,10 +36,10 @@ describe(
     jobRelatedLists.forEach(({ name, url, schema, numOfAssertCalls }) => {
       it(`extracts ${name} data`, async () => {
         let calls = 0;
-        return runActorTest<any, ActorInput>({
+        return runCrawlerTest<any, ActorInput>({
           vi,
           input: { startUrls: [url], includePersonalData: true },
-          runActor,
+          runCrawler,
           onPushData: (data, done) => {
             expect(data.length).toBeGreaterThan(0);
             calls += 1;

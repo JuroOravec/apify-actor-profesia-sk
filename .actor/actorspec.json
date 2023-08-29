@@ -72,7 +72,9 @@
         "privacyCompliance": true,
         "errorMonitoring": true,
         "changeMonitoring": false,
-        "downstreamAutomation": true
+        "downstreamAutomation": true,
+        "integratedCache": true,
+        "integratedETL": true
       },
       "faultTolerance": {
         "dataLossScope": "entry",
@@ -234,7 +236,9 @@
         "privacyCompliance": true,
         "errorMonitoring": true,
         "changeMonitoring": false,
-        "downstreamAutomation": true
+        "downstreamAutomation": true,
+        "integratedCache": true,
+        "integratedETL": true
       },
       "faultTolerance": {
         "dataLossScope": "batch",
@@ -294,7 +298,9 @@
         "privacyCompliance": true,
         "errorMonitoring": true,
         "changeMonitoring": false,
-        "downstreamAutomation": true
+        "downstreamAutomation": true,
+        "integratedCache": true,
+        "integratedETL": true
       },
       "faultTolerance": {
         "dataLossScope": "all",
@@ -354,7 +360,9 @@
         "privacyCompliance": true,
         "errorMonitoring": true,
         "changeMonitoring": false,
-        "downstreamAutomation": true
+        "downstreamAutomation": true,
+        "integratedCache": true,
+        "integratedETL": true
       },
       "faultTolerance": {
         "dataLossScope": "batch",
@@ -416,7 +424,9 @@
         "privacyCompliance": true,
         "errorMonitoring": true,
         "changeMonitoring": false,
-        "downstreamAutomation": true
+        "downstreamAutomation": true,
+        "integratedCache": true,
+        "integratedETL": true
       },
       "faultTolerance": {
         "dataLossScope": "all",
@@ -476,7 +486,9 @@
         "privacyCompliance": true,
         "errorMonitoring": true,
         "changeMonitoring": false,
-        "downstreamAutomation": true
+        "downstreamAutomation": true,
+        "integratedCache": true,
+        "integratedETL": true
       },
       "faultTolerance": {
         "dataLossScope": "all",
@@ -536,7 +548,9 @@
         "privacyCompliance": true,
         "errorMonitoring": true,
         "changeMonitoring": false,
-        "downstreamAutomation": true
+        "downstreamAutomation": true,
+        "integratedCache": true,
+        "integratedETL": true
       },
       "faultTolerance": {
         "dataLossScope": "all",

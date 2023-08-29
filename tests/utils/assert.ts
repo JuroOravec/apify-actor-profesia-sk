@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import type { ActorEntryMetadata, WithActorEntryMetadata } from 'apify-actor-utils';
+import type { ApifyEntryMetadata } from 'crawlee-one';
 
 import {
   DetailedProfesiaSKJobOfferItem,
@@ -46,7 +46,7 @@ export const joiProfesiaUrlNullable = joiProfesiaUrl.allow(null);
 ////////////////////////
 // Objects
 ////////////////////////
-export const metadataValidation = Joi.object<ActorEntryMetadata>({
+export const metadataValidation = Joi.object<ApifyEntryMetadata>({
   actorId: joiStrNotEmptyNullable,
   actorRunId: joiStrNotEmptyNullable,
   actorRunUrl: joiUrlNotEmptyNullable,
@@ -59,7 +59,7 @@ export const metadataValidation = Joi.object<ActorEntryMetadata>({
 });
 
 export const simpleJobOfferValidation = Joi.object<
-  WithActorEntryMetadata<SimpleProfesiaSKJobOfferItem>
+  SimpleProfesiaSKJobOfferItem & { metadata: ApifyEntryMetadata }
 >({
   listingUrl: joiProfesiaUrlNullable,
 
@@ -113,9 +113,11 @@ export const detailedJobOfferValidation = simpleJobOfferValidation.keys({
   employerDescription: joiStrNotEmptyNullable,
   employeeCount: joiStrNotEmptyNullable,
   employerContact: joiStrNotEmptyNullable,
-} as any) as Joi.ObjectSchema<WithActorEntryMetadata<DetailedProfesiaSKJobOfferItem>>;
+} as any) as Joi.ObjectSchema<DetailedProfesiaSKJobOfferItem & { metadata: ApifyEntryMetadata }>;
 
-export const genericEntryValidation = Joi.object<WithActorEntryMetadata<GenericListEntry>>({
+export const genericEntryValidation = Joi.object<
+  GenericListEntry & { metadata: ApifyEntryMetadata }
+>({
   name: joiStrNotEmpty,
   url: joiProfesiaUrl,
   count: joiNumIntNonNeg,
@@ -127,7 +129,7 @@ export const locationEntryValidation = genericEntryValidation.keys({
   country: joiStrNotEmpty,
 } as any);
 
-export const partnerEntryValidation = Joi.object<WithActorEntryMetadata<PartnerEntry>>({
+export const partnerEntryValidation = Joi.object<PartnerEntry & { metadata: ApifyEntryMetadata }>({
   name: joiStrNotEmptyNullable,
   url: joiUrlNotEmpty,
   description: joiStrNotEmptyNullable,

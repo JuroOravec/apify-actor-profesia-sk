@@ -1,6 +1,6 @@
 import { describe, it, vi, beforeEach, expect } from 'vitest';
 import Joi from 'joi';
-import { runActorTest } from 'apify-actor-utils';
+import { runCrawlerTest } from 'crawlee-one';
 
 import {
   detailedJobOfferValidation,
@@ -11,7 +11,7 @@ import { run } from '../../src/actor';
 import { ROUTE_LABEL_ENUM } from '../../src/types';
 import type { ActorInput } from '../../src/config';
 
-const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
+const runCrawler = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
 const customJobOfferValidation = detailedJobOfferValidation.keys({
   employmentTypes: Joi.array().items(joiEmploymentType),
@@ -48,10 +48,10 @@ describe(
       () => {
         expect.assertions(jobDetailStandardUrls.length);
         let calls = 0;
-        return runActorTest<any, ActorInput>({
+        return runCrawlerTest<any, ActorInput>({
           vi,
           input: { startUrls: jobDetailStandardUrls, includePersonalData: true },
-          runActor,
+          runCrawler,
           onPushData: async (data, done) => {
             calls += 1;
             expect(data.length).toBeGreaterThan(0);
@@ -66,10 +66,10 @@ describe(
     it(`extracts some job offer details from custom page`, () => {
       expect.assertions(jobDetailCustomUrls.length);
       let calls = 0;
-      return runActorTest<any, ActorInput>({
+      return runCrawlerTest<any, ActorInput>({
         vi,
         input: { startUrls: jobDetailCustomUrls, includePersonalData: true },
-        runActor,
+        runCrawler,
         onPushData: async (data, done) => {
           calls += 1;
           expect(data.length).toBeGreaterThan(0);

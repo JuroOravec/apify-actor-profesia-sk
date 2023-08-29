@@ -1,7 +1,7 @@
 import type { Log } from 'crawlee';
 import type { OptionsInit } from 'got-scraping';
 import { load as loadCheerio } from 'cheerio';
-import { DOMLib, checkEntriesCount, cheerioDOMLib } from 'apify-actor-utils';
+import { CrawleeOneIO, getDatasetCount, DOMLib, cheerioDOMLib } from 'crawlee-one';
 
 import type {
   EmploymentType,
@@ -14,6 +14,7 @@ import { jobDetailMethods } from './jobDetail';
 import { equalUrls } from '../utils/url';
 import { strAsNumber } from '../utils/format';
 import type { ActorInput } from '../config';
+import { serialAsyncMap } from '../utils/async';
 
 interface PageCountInfo {
   total: number;
@@ -21,8 +22,9 @@ interface PageCountInfo {
   lowerPageEnd: number;
 }
 
-interface ExtractJobOffersOptions<TEl> {
-  domLib: DOMLib<TEl>;
+interface ExtractJobOffersOptions<T extends DOMLib<any, any>> {
+  domLib: T;
+  io: CrawleeOneIO;
   log: Log;
   input: ActorInput;
   listingPageNum?: number | null;
@@ -52,9 +54,9 @@ const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string
 
 export const jobListingPageActions = {
   // prettier-ignore
-  extractJobOffers: async <T>({ domLib: origDomLib, log, listingPageNum = null, onScheduleNextPage, input, onFetchHTML, onData }: ExtractJobOffersOptions<T>) => {
-    const { jobOfferCountOnly, outputDatasetIdOrName, jobOfferFilterMaxCount } = input;
-    const origUrl = origDomLib.url();
+  extractJobOffers: async <T extends DOMLib<any, any>>({ domLib: origDomLib, log, io, listingPageNum = null, onScheduleNextPage, input, onFetchHTML, onData }: ExtractJobOffersOptions<T>) => {
+    const { jobOfferCountOnly, outputDatasetId, outputMaxEntries } = input;
+    const origUrl = await origDomLib.url();
 
     // Navigate to URL that has filters applied
     log.info(`Generating URL that has filters applied. OLD URL: ${origUrl}`);
@@ -66,12 +68,12 @@ export const jobListingPageActions = {
     let domLib = origDomLib;
     if (hasUrlChanged) {
       log.info(`Redirecting to URL that has filters applied. NEW URL: ${newUrl}`);
-      domLib = await onFetchHTML({ url: newUrl }).then((html) => cheerioDOMLib(loadCheerio(html), newUrl) as DOMLib<any>);
+      domLib = await onFetchHTML({ url: newUrl }).then((html) => cheerioDOMLib(loadCheerio(html).root(), newUrl) as T);
     } else {
       log.info(`Generated URL with filters is the same as current URL`);
     }
 
-    const pageCountInfo = jobListingDOMActions.parsePageCount({ domLib, log }); // prettier-ignore
+    const pageCountInfo = await jobListingDOMActions.parsePageCount({ domLib, log }); // prettier-ignore
     if (pageCountInfo) {
       log.info(`Total ${pageCountInfo.total} entries exist for current filter settings. URL: ${newUrl}`);
     }
@@ -82,19 +84,19 @@ export const jobListingPageActions = {
       return;
     }
 
-    const unadjustedEntries = jobListingDOMActions.extractJobOfferEntries({ domLib, log });
+    const unadjustedEntries = await jobListingDOMActions.extractJobOfferEntries({ domLib, log });
     if (!unadjustedEntries.length) {
       log.info('Stopping scraping - no entries found. We assume this is the end of pagination');
       return;
     }
     
     // If limit reached, shorten the array as needed
-    const { limitReached, overflow } = await checkEntriesCount({
+    const { limitReached, overflow } = await jobListingMethods.checkDatasetEntriesCount({
       currBatchCount: unadjustedEntries.length,
-      maxCount: jobOfferFilterMaxCount,
-      datasetNameOrId: outputDatasetIdOrName,
+      maxCount: outputMaxEntries,
+      datasetNameOrId: outputDatasetId,
       customItemCount: (listingPageNum ?? 1) * 20,
-    }, { log });
+    }, { log, io });
     const entries = !limitReached ? unadjustedEntries : unadjustedEntries.slice(0, -1 * overflow);
 
     // Schedule the next page.
@@ -117,38 +119,39 @@ export const jobListingPageActions = {
 
 export const jobListingDOMActions = {
   // prettier-ignore
-  extractJobOfferEntries: <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }) => {
+  extractJobOfferEntries: async <T extends DOMLib<any, any>>({ domLib, log }: { domLib: T; log: Log }) => {
     log.info(`Extracting entries from the page`);
-    const rootEl = domLib.root();
-    const url = domLib.url();
+    const rootEl = await domLib.root();
+    const url = await domLib.url();
     
     // Find and extract data
-    const entries = domLib.findMany(rootEl, '.list-row:not(.native-agent):not(.reach-list)', (el) => {
-      const employerName = domLib.findOne(el, '.employer', (el) => domLib.text(el));
-      const employerUrl = domLib.findOne(el, '.offer-company-logo-link', (el) => domLib.href(el, { baseUrl: url })); // prettier-ignore
-      const employerLogoUrl = domLib.findOne(el, '.offer-company-logo-link img', (el) => domLib.src(el, { baseUrl: url })); // prettier-ignore
+    const entryEls = (await rootEl?.findMany('.list-row:not(.native-agent):not(.reach-list)')) ?? [];
+    const entries = await serialAsyncMap(entryEls, async (el) => {
+      const employerName = (await (await el.findOne('.employer'))?.text()) ?? null;
+      const employerUrl = (await (await el.findOne('.offer-company-logo-link'))?.href({ baseUrl: url })) ?? null; // prettier-ignore
+      const employerLogoUrl = (await (await el.findOne('.offer-company-logo-link img'))?.src({ baseUrl: url })) ?? null; // prettier-ignore
 
-      const offerUrlEl = domLib.findOne(el, 'h2 a');
-      const offerUrl = domLib.href(offerUrlEl, { baseUrl: url });
-      const offerName = domLib.text(offerUrlEl);
+      const offerUrlEl = await el.findOne('h2 a');
+      const offerUrl = await offerUrlEl?.href({ baseUrl: url }) ?? null;
+      const offerName = await offerUrlEl?.text() ?? null;
       const offerId = offerUrl?.match(/O\d{2,}/)?.[0] ?? null;
 
-      const location = domLib.findOne(el, '.job-location', (el) => domLib.text(el));
+      const location = (await (await el.findOne('.job-location'))?.text()) ?? null;
 
-      const salaryText = domLib.findOne(el, '.label-group > a[data-dimension7="Salary label"]', (el) => domLib.text(el)); // prettier-ignore
+      const salaryText = (await (await el.findOne('.label-group > a[data-dimension7="Salary label"]'))?.text()) ?? null; // prettier-ignore
       const salaryFields = jobDetailMethods.parseSalaryText(salaryText);
 
       // prettier-ignore
-      const labels = domLib
-        .findMany(el, '.label-group > a:not([data-dimension7="Salary label"])', (el) => domLib.text(el))
+      const labelEls = await el.findMany('.label-group > a:not([data-dimension7="Salary label"])') ?? [];
+      const labels = (await serialAsyncMap(labelEls, (el) => el.text()))
         .filter(Boolean) as string[];
 
-      const footerInfoEl = domLib.findOne(el, '.list-footer .info');
-      const lastChangeRelativeTimeEl = domLib.findOne(footerInfoEl, 'strong');
-      const lastChangeRelativeTime = domLib.text(lastChangeRelativeTimeEl);
+      const footerInfoEl = await el.findOne('.list-footer .info');
+      const lastChangeRelativeTimeEl = await footerInfoEl?.findOne('strong');
+      const lastChangeRelativeTime = await lastChangeRelativeTimeEl?.text() ?? null;
       // Remove the element so it's easier to get the text content
-      domLib.remove(lastChangeRelativeTimeEl);
-      const lastChangeTypeText = domLib.textAsLower(footerInfoEl);
+      await lastChangeRelativeTimeEl?.remove();
+      const lastChangeTypeText = await footerInfoEl?.textAsLower() ?? null;
       const lastChangeType = lastChangeTypeText === 'pridané' ? 'added' : 'modified';
 
       return {
@@ -175,21 +178,21 @@ export const jobListingDOMActions = {
     return entries;
   },
 
-  parsePageCount: <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }): PageCountInfo | null => {
+  parsePageCount: async <T extends DOMLib<any, any>>({ domLib, log }: { domLib: T; log: Log }) => {
     log.info('Parsing results count');
-    const rootEl = domLib.root();
+    const rootEl = await domLib.root();
 
     const toNum = (t: string) => strAsNumber(t, { removeWhitespace: true, mode: 'int' }) ?? 0;
 
-    const countText = domLib.findOne(rootEl, '.offer-counter', (el) => domLib.text(el));
+    const countText = (await (await rootEl?.findOne('.offer-counter'))?.text()) ?? null;
     if (!countText) return null;
 
-    const [rawCurrRange, rawTotal] = countText?.split('z').map((t) => t.trim()) ?? [];
+    const [rawCurrRange, rawTotal] = countText.split('z').map((t) => t.trim()) ?? [];
     const total = toNum(rawTotal);
     const [lowerPageEnd, upperPageEnd] = rawCurrRange?.split('-').map((t) => toNum(t));
 
     log.info(`Done parsing results count: ${JSON.stringify({ total, upperPageEnd, lowerPageEnd })}`); // prettier-ignore
-    return { total, upperPageEnd, lowerPageEnd };
+    return { total, upperPageEnd, lowerPageEnd } satisfies PageCountInfo;
   },
 };
 
@@ -263,5 +266,60 @@ export const jobListingMethods = {
     const nextPageUrl = urlObj.href;
     log.info(`Done creating next page URL: ${nextPageUrl}`);
     return nextPageUrl;
+  },
+
+  /**
+   * Given a batch of entries, use several strategies to check
+   * if we've reached the limit on the max number of entries
+   * we're allowed to extract this run.
+   */
+  checkDatasetEntriesCount: async (
+    {
+      currBatchCount,
+      maxCount,
+      datasetNameOrId,
+      customItemCount,
+    }: {
+      /** Number of entries in the current batch */
+      currBatchCount: number;
+      /** Max number of entries allowed to extract. */
+      maxCount?: number | null;
+      /**
+       * If given, maxCount will be ALSO compared against
+       * the amount of entries already in the dataset.
+       */
+      datasetNameOrId?: string | null;
+      /**
+       * If given, maxCount will be ALSO compared against
+       * this amount.
+       */
+      customItemCount?: number | null;
+    },
+    { io, log }: { io: CrawleeOneIO; log: Log }
+  ) => {
+    const datasetItemCount = datasetNameOrId
+      ? await getDatasetCount(datasetNameOrId, { log, io })
+      : null;
+
+    if ((datasetItemCount == null && customItemCount == null) || maxCount == null) {
+      return { limitReached: false, overflow: 0 };
+    }
+
+    // Check if we've reached the limit for max entries
+    if (currBatchCount >= maxCount) {
+      return { limitReached: true, overflow: currBatchCount - maxCount };
+    }
+
+    // Use count of items already in dataset to check if limit reached
+    if (datasetItemCount != null && datasetItemCount + currBatchCount >= maxCount) {
+      return { limitReached: true, overflow: datasetItemCount + currBatchCount - maxCount };
+    }
+
+    // Use page offset to check if limit reached (20 entries per page)
+    if (customItemCount != null && customItemCount >= maxCount) {
+      return { limitReached: true, overflow: customItemCount - maxCount };
+    }
+
+    return { limitReached: false, overflow: 0 };
   },
 };

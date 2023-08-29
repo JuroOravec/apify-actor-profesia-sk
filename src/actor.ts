@@ -1,11 +1,11 @@
-import { CheerioCrawlerOptions, CheerioCrawlingContext } from 'crawlee';
-import { createAndRunApifyActor } from 'apify-actor-utils';
+import type { CheerioCrawlerOptions, CheerioCrawlingContext } from 'crawlee';
+import { createAndRunCrawleeOne } from 'crawlee-one';
 
 import { createHandlers, routes } from './router';
 import { datasetTypeToUrl } from './constants';
 import { validateInput } from './validation';
 import { getPackageJsonInfo } from './utils/package';
-import { RouteLabel } from './types';
+import type { RouteLabel } from './types';
 
 // Flow:
 // 1 Jobs (https://www.profesia.sk/praca/)
@@ -83,7 +83,7 @@ const crawlerConfigDefaults: CheerioCrawlerOptions = {
 export const run = async (crawlerConfigOverrides?: CheerioCrawlerOptions): Promise<void> => {
   const pkgJson = getPackageJsonInfo(module, ['name']);
 
-  await createAndRunApifyActor<'cheerio', CheerioCrawlingContext, RouteLabel>({
+  await createAndRunCrawleeOne<'cheerio', CheerioCrawlingContext, RouteLabel>({
     actorType: 'cheerio',
     actorName: pkgJson.name,
     actorConfig: {
@@ -95,10 +95,11 @@ export const run = async (crawlerConfigOverrides?: CheerioCrawlerOptions): Promi
     crawlerConfigOverrides,
     onActorReady: async (actor) => {
       const startUrls: string[] = [];
-      if (actor.input?.startUrls) startUrls.push(...actor.input?.startUrls);
-      else if (actor.input?.datasetType) startUrls.push(datasetTypeToUrl[actor.input?.datasetType]);
+      if (!actor.input?.startUrls && actor.input?.datasetType) {
+        startUrls.push(datasetTypeToUrl[actor.input?.datasetType]);
+      }
 
-      await actor.runActor(startUrls);
+      await actor.runCrawler(startUrls);
     },
   });
 };

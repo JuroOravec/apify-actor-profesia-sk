@@ -6,7 +6,9 @@ import {
   RouteHandler,
   pushData,
   PushDataOptions,
-} from 'apify-actor-utils';
+  ActorRouterContext,
+  apifyIO,
+} from 'crawlee-one';
 
 import { GenericListEntry, jobRelatedListsPageActions } from './pageActions/jobRelatedLists';
 import { partnersDOMActions } from './pageActions/partners';
@@ -14,8 +16,14 @@ import { SimpleProfesiaSKJobOfferItem, RouteLabel, ROUTE_LABEL_ENUM } from './ty
 import { datasetTypeToUrl } from './constants';
 import { jobListingPageActions } from './pageActions/jobListing';
 import { jobDetailDOMActions } from './pageActions/jobDetail';
-import { serialAsyncMap, wait } from './utils/async';
+import { wait } from './utils/async';
 import type { ActorInput } from './config';
+
+type ProfesiaRouterContext = ActorRouterContext<
+  CheerioCrawlingContext<any, any>,
+  RouteLabel,
+  ActorInput
+>;
 
 const isUrlOfCompanyProfile = (url: string) =>
   url.match(/[\W]profesia\.sk\/praca\//i) &&
@@ -29,7 +37,11 @@ const isUrlOfJobOffer = (url: string) =>
   // Url has /O123456 in its path (first is letter, not zero) - eg https://www.profesia.sk/praca/gohealth/O3964543
   url.match(/\/praca\/.*?\/O[0-9]{2,}/);
 
-export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, RouteLabel>([
+export const routes = createCheerioRouteMatchers<
+  CheerioCrawlingContext,
+  ProfesiaRouterContext,
+  RouteLabel
+>([
   {
     // Check if user give us URL of the main page. If so, redirect them to job listing page https://www.profesia.sk/praca
     name: 'Main page',
@@ -61,9 +73,8 @@ export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, RouteLa
     name: 'Company detail - custom',
     handlerLabel: null,
     match: async (url, ctx) => {
-      const domLib = cheerioDOMLib(ctx.$, url);
-      const rootEl = domLib.root();
-      const isCustomDesign = domLib.findMany(rootEl, 'body.listing.custom-design').length;
+      const domLib = cheerioDOMLib(ctx.$.root(), url);
+      const isCustomDesign = !!(await domLib.findMany('body.listing.custom-design')).length;
       return isUrlOfCompanyProfile(url) && isCustomDesign;
     },
     action: (url, { log }) => { log.error(`UNSUPPORTED PAGE TYPE DETECTED - company page with custom design. These are not supported. URL will not be processed. URL: ${url}`); }, // prettier-ignore
@@ -77,9 +88,9 @@ export const routes = createCheerioRouteMatchers<CheerioCrawlingContext, RouteLa
     // Eg consider this https://www.profesia.sk/praca/123kurier/C238652
     handlerLabel: ROUTE_LABEL_ENUM.JOB_LISTING,
     match: async (url, ctx) => {
-      const domLib = cheerioDOMLib(ctx.$, url);
-      const rootEl = domLib.root();
-      const isNotCustomDesign = domLib.findMany(rootEl, 'body.listing:not(.custom-design)').length;
+      const domLib = cheerioDOMLib(ctx.$.root(), url);
+      const isNotCustomDesign = !!(await domLib.findMany('body.listing:not(.custom-design)'))
+        .length;
       return isUrlOfCompanyProfile(url) && isNotCustomDesign;
     },
   },
@@ -119,7 +130,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
     jobOfferDetailed,
     includePersonalData,
     outputPickFields,
-    outputDatasetIdOrName,
+    outputDatasetId,
     outputRenameFields,
   } = input;
 
@@ -127,7 +138,7 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
     includeMetadata: true,
     showPrivate: includePersonalData,
     pickKeys: outputPickFields,
-    datasetIdOrName: outputDatasetIdOrName,
+    datasetId: outputDatasetId,
     remapKeys: outputRenameFields,
   } satisfies Omit<PushDataOptions<any>, 'privacyMask'>;
 
@@ -145,10 +156,10 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
         // If "detailed" option, also fetch and process the job detail page for each entry
         log.info(`Fetching details page of ${entries.length} entries`);
 
-        await serialAsyncMap(entries, async (entry) => {
+        for (const entry of entries) {
           if (!entry.offerUrl) {
             log.info(`Skipping fetching details page - URL is missing (ID: ${entry.offerId})`);
-            return;
+            continue;
           }
 
           log.info(`Fetching details page (ID: ${entry.offerId}) URL: ${entry.offerUrl}`);
@@ -156,8 +167,8 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
           log.info(`Done fetching details page (ID: ${entry.offerId}) URL: ${entry.offerUrl}`);
 
           const cheerioDom = cheerio.load(entryHtml);
-          const domLib = cheerioDOMLib(cheerioDom, entry.offerUrl);
-          const jobDetail = jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: entry }); // prettier-ignore
+          const domLib = cheerioDOMLib(cheerioDom.root(), entry.offerUrl);
+          const jobDetail = await jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: entry }); // prettier-ignore
 
           // Push the data after each scraped page to limit the chance of losing data
           await Promise.all([
@@ -170,15 +181,14 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
             }),
             wait(100),
           ]);
-
-          return jobDetail;
-        });
+        }
       };
 
-      const domLib = cheerioDOMLib(ctx.$, request.loadedUrl || request.url);
+      const domLib = cheerioDOMLib(ctx.$.root(), request.loadedUrl || request.url);
       const listingPageNum = request.userData?.listingPageNum || 1;
       await jobListingPageActions.extractJobOffers({
         domLib,
+        io: apifyIO,
         log,
         input,
         listingPageNum,
@@ -199,8 +209,8 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
     JOB_DETAIL: async (ctx) => {
       const { log, request } = ctx;
 
-      const domLib = cheerioDOMLib(ctx.$, request.loadedUrl || request.url);
-      const entry = jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: request.userData?.offer }); // prettier-ignore
+      const domLib = cheerioDOMLib(ctx.$.root(), request.loadedUrl || request.url);
+      const entry = await jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: request.userData?.offer }); // prettier-ignore
       await pushData(entry, ctx, {
         ...pushDataOptions,
         privacyMask: {

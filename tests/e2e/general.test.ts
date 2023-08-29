@@ -1,6 +1,6 @@
 import { describe, it, vi, beforeEach, expect } from 'vitest';
 import Joi from 'joi';
-import { runActorTest } from 'apify-actor-utils';
+import { runCrawlerTest } from 'crawlee-one';
 
 import {
   genericEntryValidation,
@@ -14,7 +14,7 @@ import { run } from '../../src/actor';
 import type { ActorInput } from '../../src/config';
 
 const log = (...args) => console.log(...args);
-const runActor = () => run({ useSessionPool: false, maxRequestRetries: 0 });
+const runCrawler = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
 // prettier-ignore
 const testCases: { datasetType: DatasetType; expectedUrl: string; schema: Joi.ObjectSchema; numOfPushDataCalls: number; numOfAssertCalls: number }[] = [
@@ -46,15 +46,15 @@ describe(
         it(`extracts ${datasetType} when datasetType=${datasetType}`, () => {
           expect.assertions(numOfAssertCalls);
           let calls = 0;
-          return runActorTest<any, ActorInput>({
+          return runCrawlerTest<any, ActorInput>({
             vi,
             input: {
               datasetType: datasetType as DatasetType,
-              jobOfferFilterMaxCount: 3,
+              outputMaxEntries: 3,
               jobOfferDetailed: false,
               includePersonalData: true,
             },
-            runActor,
+            runCrawler,
             onBatchAddRequests: (req) => {
               expect(expectedUrl).toBe(req[0].url);
             },

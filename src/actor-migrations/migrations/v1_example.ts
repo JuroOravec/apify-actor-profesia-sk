@@ -1,5 +1,5 @@
 import type { ApifyClient } from 'apify-client';
-import { Migration, createLocalMigrationState } from 'apify-actor-utils';
+import { Migration, createLocalMigrationState } from 'crawlee-one';
 import path from 'path';
 
 // This file is an example of how to make changes to the actors

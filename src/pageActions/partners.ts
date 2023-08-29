@@ -1,5 +1,7 @@
 import type { Log } from 'apify';
-import type { DOMLib } from 'apify-actor-utils';
+import type { DOMLib } from 'crawlee-one';
+
+import { serialAsyncMap } from '../utils/async';
 
 export interface PartnerEntry {
   name: string | null;
@@ -16,54 +18,60 @@ export interface PartnerEntry {
 export const partnersDOMActions = {
   /** Extract partners links from https://www.profesia.sk/partneri */
   // prettier-ignore
-  extractPartnerEntries: <T>({ domLib, log }: { domLib: DOMLib<T>; log: Log }) => {
+  extractPartnerEntries: async <T extends DOMLib<object, object>>({ domLib, log }: { domLib: T; log: Log }) => {
     log.info('Starting extracting partners entries');
-    const rootEl = domLib.root();
+    const rootEl = await domLib.root();
+    const url = await domLib.url();
 
     log.info('Collecting partners categories');
-    const tabNames = domLib.findMany(rootEl, '.nav-tabs a', (el) => domLib.text(el)).filter(Boolean) as string[]; // prettier-ignore
-    const tabCards = domLib.findMany(rootEl, '.tab-content .card');
+    const tabs = (await rootEl?.findMany('.nav-tabs a')) ?? [];
+    const tabNames = (await serialAsyncMap(tabs, async (el) => {
+      const text = await el.text();
+      return text;
+    })).filter(Boolean) as string[]; // prettier-ignore
     log.info(`Found ${tabNames.length} partners categories ${JSON.stringify(tabNames)}`);
 
-    const entries = tabCards
-      .map((tabCardEl, tabIndex) => {
+    const tabCards = (await rootEl?.findMany('.tab-content .card')) ?? [];
+    const entries = (await serialAsyncMap(tabCards, async (tabCardEl, tabIndex) => {
         const category = tabNames[tabIndex];
         log.info(`Extracting entries for category ${category}`);
 
-        const categEntries = domLib.findMany(tabCardEl, '.row', (entryEl) => {
-          return partnersDOMActions.extractSinglePartnerEntry({ domLib, entryEl, category }); // prettier-ignore
+        const rowEls = await tabCardEl.findMany('.row');
+        const categEntries = await serialAsyncMap(rowEls, (entry) => {
+          return partnersDOMActions.extractSinglePartnerEntry({ url, entry, category }); // prettier-ignore
         });
 
         log.info(`Found ${categEntries.length} entries for category ${category}`);
 
         return categEntries;
-      })
+      }))
       .flat(1);
 
     log.info(`Done extracting partners entries (total ${entries.length})`);
     return entries;
   },
 
-  extractSinglePartnerEntry: <T>({
-    domLib,
-    entryEl,
+  extractSinglePartnerEntry: async <T extends DOMLib<object, any>>({
+    entry,
+    url: baseUrl,
     category,
   }: {
-    domLib: DOMLib<T>;
-    entryEl: T;
+    entry: T;
+    url: string | null;
     category: string;
-  }): PartnerEntry => {
-    const baseUrl = domLib.url();
-    const logoUrl = domLib.findOne(entryEl, 'img', (el) => domLib.src(el, { baseUrl }));
+  }) => {
+    const logoEl = await entry.findOne('img');
+    const logoUrl = (await logoEl?.src({ baseUrl })) ?? null;
 
-    const infoEl = domLib.findOne(entryEl, 'div:nth-child(2)');
-    const urlEl = domLib.findOne(infoEl, 'a');
-    const url = domLib.href(urlEl, { baseUrl });
-    const name = domLib.text(urlEl);
+    const infoEl = await entry.findOne('div:nth-child(2)');
+    const urlEl = await infoEl?.findOne('a');
+    const url = (await urlEl?.href({ baseUrl })) ?? null;
+    const name = (await urlEl?.text()) ?? null;
+
     // Remove el so description text is easy to take
-    domLib.remove(urlEl);
-    const description = domLib.text(infoEl);
+    await urlEl?.remove();
+    const description = (await infoEl?.text()) ?? null;
 
-    return { name, url, description, logoUrl, category };
+    return { name, url, description, logoUrl, category } satisfies PartnerEntry;
   },
 };

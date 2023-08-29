@@ -54,6 +54,15 @@ This actor is a robust production-grade solution suitable for businesses and tho
   
   - You can use Apify's proxy, or your own, via Input.
 
+- **Integrated data filtering and transformation**
+  
+  - Filter and modify scraped entries out of the box from within Apify UI, without needing other tools.
+
+- **Integrated cache**
+  
+  - You can use cache together with custom filtering to e.g. save only NEW entries to the dataset. Save time and reduce cost.
+  - Cache automatically stores which entries were already scraped. Cache can persist between different scraper runs.
+
 - **Custom crawler configuration**
   
   - For advanced needs, you can pass Crawler configuration via Input.
@@ -65,6 +74,12 @@ This actor is a robust production-grade solution suitable for businesses and tho
 - **Privacy-compliant (GDPR)**
   
   - By default, personal data is redacted to avoid privacy issues. You can opt-in to include un-censored data.
+
+- **Pass scraped dataset to other actors**
+  
+  - Automatically trigger another actor when this one is done to process the scraped dataset.
+  - Metamorphing means that the dataset and key-value store is passed to another actor.
+  - Actor metamorph can be configure via actor input. No need to define custom actors just for that.
 
 - **Error monitoring**
   
@@ -342,7 +357,7 @@ Hence you can e.g. use Profesia.sk Scraper to dynamically check for existence of
 
 
 
-To limit how many results you get, set `jobOfferFilterMaxCount` to desired amount.
+To limit how many results you get, set `outputMaxEntries` to desired amount.
 
 
 

@@ -1,5 +1,5 @@
 import type { DatasetFeatures, DatasetModes, DatasetOutput } from 'actor-spec';
-import type { ApifyScraperActorSpec, WithActorEntryMetadata } from 'apify-actor-utils';
+import type { ApifyScraperActorSpec, ApifyEntryMetadata } from 'crawlee-one';
 import { fromPairs } from 'lodash';
 
 import type { DetailedProfesiaSKJobOfferItem, SimpleProfesiaSKJobOfferItem } from './types';
@@ -51,6 +51,8 @@ const datasetFeatures = {
   errorMonitoring: true,
   changeMonitoring: false,
   downstreamAutomation: true,
+  integratedCache: true,
+  integratedETL: true,
 } satisfies DatasetFeatures;
 
 const actorId = 'profesia-sk-scraper';
@@ -200,7 +202,7 @@ const actorSpec = {
         exampleEntryComments: fromPairs(
           jobOfferDetailedField.map((f) => [f, 'Only in detailed entry'])
         ) as Record<JobOfferDetailedFields, string>,
-      } satisfies DatasetOutput<WithActorEntryMetadata<DetailedProfesiaSKJobOfferItem>>,
+      } satisfies DatasetOutput<DetailedProfesiaSKJobOfferItem & { metadata: ApifyEntryMetadata }>,
     },
     {
       name: 'companies',

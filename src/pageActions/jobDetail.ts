@@ -1,6 +1,6 @@
 import type { Log } from 'apify';
 import { chunk } from 'lodash';
-import type { DOMLib } from 'apify-actor-utils';
+import type { DOMLib } from 'crawlee-one';
 
 import {
   EmploymentType,
@@ -11,6 +11,7 @@ import {
   DetailedProfesiaSKJobOfferItem,
   SALARY_PERIOD_ENUM,
 } from '../types';
+import { serialAsyncMap } from '../utils/async';
 
 const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string }> = {
   fte: { urlPath: 'plny-uvazok', text: 'plný úväzok' },
@@ -57,38 +58,38 @@ export const jobDetailDOMActions = {
   // - https://www.profesia.sk/praca/accenture/O4491399
   // - https://www.profesia.sk/praca/gohealth/O3964543
   // - https://www.profesia.sk/praca/ing-lukas-hromjak/O4068250
-  extractJobDetail: <T>({
+  extractJobDetail: async <T extends DOMLib<any, any>>({
     domLib,
     log,
     jobData,
   }: {
-    domLib: DOMLib<T>;
+    domLib: T;
     log: Log;
     /**
      * In case we've come across this job ad on a listing page, we pass it here
      * in case there's some data that was available then which is not here */
     jobData?: SimpleProfesiaSKJobOfferItem;
-  }): DetailedProfesiaSKJobOfferItem => {
+  }) => {
     log.info(`Extracting job details from the page`);
-    const rootEl = domLib.root();
+    const rootEl = await domLib.root();
 
-    const containerEl = domLib.findOne(rootEl, '#content .container');
-    const entryEl = domLib.findOne(containerEl, '#detail .card-content');
+    const containerEl = await rootEl?.findOne('#content .container');
+    const entryEl = (await containerEl?.findOne('#detail .card-content')) ?? null;
 
-    const labels = domLib
-      .findMany(containerEl, '.label')
-      .map((el) => domLib.textAsLower(el))
-      .filter(Boolean) as string[];
+    const labelEls = (await containerEl?.findMany('.label')) ?? [];
+    const labels = (await serialAsyncMap(labelEls, (el) => el.textAsLower())).filter(
+      Boolean
+    ) as string[];
 
-    const offerUrl = domLib.url();
+    const offerUrl = await domLib.url();
     const offerId = offerUrl?.match(/O\d{2,}/)?.[0] ?? null;
 
-    const salaryText = domLib.findOne(entryEl, '.salary-range', (el) => domLib.text(el));
+    const salaryText = (await (await entryEl?.findOne('.salary-range'))?.text()) ?? null;
     const salaryFields = jobDetailMethods.parseSalaryText(salaryText);
 
-    const basicFields = jobDetailDOMActions.extractJobDetailBasicInfo(domLib, entryEl);
-    const descriptionFields = jobDetailDOMActions.extractJobDetailDescriptionInfo(domLib, entryEl); // prettier-ignore
-    const categFields = jobDetailDOMActions.extractJobDetailCategories(domLib, entryEl);
+    const basicFields = await jobDetailDOMActions.extractJobDetailBasicInfo(entryEl);
+    const descriptionFields = await jobDetailDOMActions.extractJobDetailDescriptionInfo(entryEl); // prettier-ignore
+    const categFields = await jobDetailDOMActions.extractJobDetailCategories(entryEl);
 
     const entry = {
       // Add the fields we've got from listing page
@@ -105,34 +106,34 @@ export const jobDetailDOMActions = {
       offerUrl,
       offerId,
       labels,
-    };
+    } satisfies DetailedProfesiaSKJobOfferItem;
 
     log.info(`Done extracting job details from the page (ID: ${entry.offerId})`);
     return entry;
   },
 
-  extractJobDetailBasicInfo: <T>(domLib: DOMLib<T>, entryEl: T | null) => {
-    const offerName = domLib.findOne(entryEl, '[itemprop="title"]', (el) => domLib.text(el));
+  extractJobDetailBasicInfo: async <T extends DOMLib<object, any>>(domLib: T | null) => {
+    const offerName = (await (await domLib?.findOne('[itemprop="title"]'))?.text()) ?? null;
 
-    const baseUrl = domLib.url();
-    const employerName = domLib.findOne(entryEl, '[itemprop="hiringOrganization"]', (el) => domLib.text(el)); // prettier-ignore
-    const employerUrl = domLib.findOne(entryEl, '.easy-design-btn-offer-list', (el) => domLib.href(el, { baseUrl })); // prettier-ignore
-    const employerLogoUrl = domLib.findOne(entryEl, '.easy-design-logo img', (el) => domLib.src(el, { baseUrl })); // prettier-ignore
+    const baseUrl = (await domLib?.url()) ?? null;
+    const employerName = await (await domLib?.findOne('[itemprop="hiringOrganization"]'))?.text() ?? null; // prettier-ignore
+    const employerUrl = await (await domLib?.findOne('.easy-design-btn-offer-list'))?.href({ baseUrl }) ?? null; // prettier-ignore
+    const employerLogoUrl = await (await domLib?.findOne('.easy-design-logo img'))?.src({ baseUrl }) ?? null; // prettier-ignore
 
-    const employmentTypesText = domLib.findOne(entryEl, '[itemprop="employmentType"]', (el) => domLib.text(el)); // prettier-ignore
+    const employmentTypesText = await (await domLib?.findOne('[itemprop="employmentType"]'))?.text() ?? null; // prettier-ignore
     const employmentTypes = Object.entries(employmentTypeInfo).reduce<EmploymentType[]>((agg, [key, { text }]) => {
       if (employmentTypesText?.includes(text)) agg.push(key as EmploymentType);
       return agg;
     }, []); // prettier-ignore
 
-    const startDate = domLib.findOne(entryEl, '.panel-body > .row:nth-child(2) > div:nth-child(1) span', (el) => domLib.text(el)); // prettier-ignore
-    const location = domLib.findOne(entryEl, '[itemprop="jobLocation"]', (el) => domLib.text(el));
+    const startDate = await (await domLib?.findOne('.panel-body > .row:nth-child(2) > div:nth-child(1) span'))?.text() ?? null; // prettier-ignore
+    const location = (await (await domLib?.findOne('[itemprop="jobLocation"]'))?.text()) ?? null;
 
-    const phoneNumbers = domLib
-      .findMany(entryEl, '.details-section .tel', (el) => domLib.text(el))
-      .filter((el) => el) as string[];
+    const phoneEls = (await domLib?.findMany('.details-section .tel')) ?? [];
+    const phoneNumbers = (await serialAsyncMap(phoneEls, (el) => el.text()))
+      .filter(Boolean) as string[]; // prettier-ignore
 
-    const datePosted = domLib.findOne(entryEl, '[itemprop="datePosted"]', (el) => domLib.text(el));
+    const datePosted = (await (await domLib?.findOne('[itemprop="datePosted"]'))?.text()) ?? null;
 
     return {
       offerName,
@@ -147,59 +148,66 @@ export const jobDetailDOMActions = {
     };
   },
 
-  extractJobDetailDescriptionInfo: <T>(domLib: DOMLib<T>, entryEl: T | null) => {
-    const descriptionInfo = descriptionSections.reduce<ProfesiaSkJobOfferDescriptionFields>(
-      (agg, { subsections, selector }) => {
-        const sectionEl = domLib.findOne(entryEl, selector);
-        domLib.findOne(sectionEl, '.subtitle-line', (el) => domLib.remove(el));
+  extractJobDetailDescriptionInfo: <T extends DOMLib<object, any>>(domLib: T | null) => {
+    const descriptionInfo = descriptionSections.reduce<
+      Promise<ProfesiaSkJobOfferDescriptionFields>
+    >(async (promiseAgg, { subsections, selector }) => {
+      const agg = await promiseAgg;
+      const sectionEl = await domLib?.findOne(selector);
+      await (await sectionEl?.findOne('.subtitle-line'))?.remove();
 
-        const sectionEls = domLib.children(sectionEl);
-        chunk(sectionEls, 2).forEach(([titleEl, contentEl]) => {
-          const titleText = domLib.textAsLower(titleEl);
+      const sectionEls = (await sectionEl?.children()) ?? [];
+      for (const [titleEl, contentEl] of chunk(sectionEls, 2)) {
+        const titleText = await titleEl.textAsLower();
 
-          for (const [subsection, fragments] of Object.entries(subsections)) {
-            if (fragments.some((text: string) => titleText?.includes(text))) {
-              domLib.findMany(contentEl, '.text-gray', (el) => domLib.remove(el));
-              const key = subsection as keyof ProfesiaSkJobOfferDescriptionFields;
-              agg[key] = domLib.text(contentEl);
-            }
-          }
-        });
-        return agg;
-      },
-      {} as any
-    );
+        for (const [subsection, fragments] of Object.entries(subsections)) {
+          const textMatches = fragments.some((text: string) => titleText?.includes(text));
+          if (!textMatches) continue;
+
+          const greyTextEls = (await contentEl?.findMany('.text-gray')) ?? [];
+          await serialAsyncMap(greyTextEls, (el) => el.remove());
+
+          const key = subsection as keyof ProfesiaSkJobOfferDescriptionFields;
+          agg[key] = await contentEl.text();
+        }
+      }
+
+      return agg;
+    }, Promise.resolve({} as any));
 
     return descriptionInfo;
   },
 
-  extractJobDetailCategories: <T>(domLib: DOMLib<T>, entryEl: T | null) => {
-    const baseUrl = domLib.url();
+  extractJobDetailCategories: async <T extends DOMLib<object, any>>(domLib: T | null) => {
+    const baseUrl = await domLib?.url();
 
     const locationCategs: JobOfferCategoryItem[] = [];
     const professionCategs: JobOfferCategoryItem[] = [];
 
-    let currHeading: string | null;
+    let currHeading: string | null = null;
     // prettier-ignore
-    domLib.findOne(entryEl, '.overall-info .hidden-xs', (el) => domLib.children(el))?.forEach((el) => {
-      const nodeName = domLib.nodeName(el);
+    const children = await (await domLib?.findOne('.overall-info .hidden-xs'))?.children() ?? [];
+    for (const el of children) {
+      const nodeName = await el.nodeName();
       if (nodeName === 'STRONG') {
-        currHeading = domLib.textAsLower(el);
-        return;
+        currHeading = await el.textAsLower();
+        continue;
       }
+
       if (nodeName === 'A' && currHeading?.includes('lokalit')) {
         locationCategs.push({
-          url: domLib.href(el, { baseUrl }),
-          name: domLib.text(el),
+          url: await el.href({ baseUrl }),
+          name: await el.text(),
         });
       }
+
       if (nodeName === 'A' && currHeading?.includes('pozícia')) {
         professionCategs.push({
-          url: domLib.href(el, { baseUrl }),
-          name: domLib.text(el),
+          url: await el.href({ baseUrl }),
+          name: await el.text(),
         });
       }
-    });
+    }
 
     return { locationCategs, professionCategs };
   },

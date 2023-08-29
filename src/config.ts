@@ -5,23 +5,11 @@ import {
   createBooleanField,
   createIntegerField,
   createStringField,
-  createArrayField,
   Field,
   ActorInputSchema,
   createActorOutputSchema,
 } from 'apify-actor-config';
-import {
-  CrawlerConfigActorInput,
-  LoggingActorInput,
-  OutputActorInput,
-  PrivacyActorInput,
-  ProxyActorInput,
-  crawlerInput,
-  loggingInput,
-  outputInput,
-  privacyInput,
-  proxyInput,
-} from 'apify-actor-utils';
+import { AllActorInputs, allActorInputs } from 'crawlee-one';
 
 import { DATASET_TYPE, DatasetType, EmploymentType, SalaryPeriod, WorkFromHomeType } from './types';
 import actorSpec from './actorspec';
@@ -36,14 +24,10 @@ const newLine = (repeats = 1) => '<br/>'.repeat(repeats);
 export interface CustomActorInput {
   /** Choose what kind of data you want to extract - job offers, list of companies, list of industries, ... */
   datasetType?: DatasetType;
-  /** URLs to start with */
-  startUrls?: string[];
   /** If checked, the scraper will obtain more detailed info for job offers by visit the details page of each job offer to extract data. If un-checked, only the data from the listing page is extracted. For details, please refer to http://apify.com/store/jurooravec/profesia-sk-scraper#output */
   jobOfferDetailed?: boolean;
   /** Comma-separated list of keywords. If given, only entries matching the query will be retrieved (full-text search) */
   jobOfferFilterQuery?: string;
-  /** If set, only up to this number of entries will be extracted */
-  jobOfferFilterMaxCount?: number;
   /** If set, only entries offering this much or more will be extracted */
   jobOfferFilterMinSalaryValue?: number;
   /** Choose if the minimum salary is in per hour or per month format */
@@ -61,11 +45,7 @@ export interface CustomActorInput {
 /** Shape of the data passed to the actor from Apify */
 export interface ActorInput
   // Include the common fields in input
-  extends CrawlerConfigActorInput,
-    LoggingActorInput,
-    ProxyActorInput,
-    PrivacyActorInput,
-    OutputActorInput,
+  extends AllActorInputs,
     CustomActorInput {}
 
 const customActorInput: Record<keyof CustomActorInput, Field> = {
@@ -82,18 +62,6 @@ const customActorInput: Record<keyof CustomActorInput, Field> = {
     enum: DATASET_TYPE,
     enumTitles: DATASET_TYPE.map(startCase),
     nullable: true,
-  }),
-  startUrls: createArrayField({
-    title: 'Start URLs',
-    type: 'array',
-    description: `Select specific URLs to scrape. This option takes precedence over
-        ${strong('Dataset type')}.${newLine(2)}
-        - If the URL is a listing page or a company page, all entries of that list are extracted.${newLine()}
-        - If the URL is a job offer page, only that page is extracted.${newLine()}
-        - If the URL corresponds to other ${strong(
-          'Dataset type'
-        )} (e.g. list of partners), this kind of dataset is extracted.`,
-    editor: 'requestListSources',
   }),
 
   jobOfferDetailed: createBooleanField({
@@ -167,17 +135,6 @@ const customActorInput: Record<keyof CustomActorInput, Field> = {
     minimum: 0,
     nullable: true,
   }),
-  jobOfferFilterMaxCount: createIntegerField({
-    title: 'Target number of results',
-    type: 'integer',
-    description: `If set, only up to this number of entries will be extracted.
-    The actual number of entries might be higher than this due to multiple pages
-    being scraped at the same time.`,
-    prefill: 100,
-    example: 100,
-    minimum: 1,
-    nullable: true,
-  }),
   jobOfferCountOnly: createBooleanField({
     title: 'Count the matched job offers',
     type: 'boolean',
@@ -191,7 +148,7 @@ const customActorInput: Record<keyof CustomActorInput, Field> = {
 };
 
 // Customize the default options
-crawlerInput.requestHandlerTimeoutSecs.prefill = 60 * 3;
+allActorInputs.requestHandlerTimeoutSecs.prefill = 60 * 3;
 
 const inputSchema = createActorInputSchema<ActorInputSchema<Record<keyof ActorInput, Field>>>({
   schemaVersion: 1,
@@ -203,11 +160,7 @@ const inputSchema = createActorInputSchema<ActorInputSchema<Record<keyof ActorIn
   properties: {
     ...customActorInput,
     // Include the common fields in input
-    ...proxyInput,
-    ...privacyInput,
-    ...outputInput,
-    ...crawlerInput,
-    ...loggingInput,
+    ...allActorInputs,
   },
 });
 
