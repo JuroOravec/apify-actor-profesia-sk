@@ -80,6 +80,7 @@
     "lodash": "^4.17.21",
     "node-fetch": "^2.6.6",
     "pkginfo": "^0.4.1",
-    "playwright": "^1.32.3"
+    "playwright": "^1.32.3",
+    "portadom": "^1.0.2"
   }
 }

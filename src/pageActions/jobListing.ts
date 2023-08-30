@@ -1,7 +1,8 @@
 import type { Log } from 'crawlee';
 import type { OptionsInit } from 'got-scraping';
 import { load as loadCheerio } from 'cheerio';
-import { CrawleeOneIO, getDatasetCount, DOMLib, cheerioDOMLib } from 'crawlee-one';
+import { CrawleeOneIO, getDatasetCount } from 'crawlee-one';
+import { Portadom, cheerioPortadom } from 'portadom';
 
 import type {
   EmploymentType,
@@ -14,7 +15,6 @@ import { jobDetailMethods } from './jobDetail';
 import { equalUrls } from '../utils/url';
 import { strAsNumber } from '../utils/format';
 import type { ActorInput } from '../config';
-import { serialAsyncMap } from '../utils/async';
 
 interface PageCountInfo {
   total: number;
@@ -22,8 +22,8 @@ interface PageCountInfo {
   lowerPageEnd: number;
 }
 
-interface ExtractJobOffersOptions<T extends DOMLib<any, any>> {
-  domLib: T;
+interface ExtractJobOffersOptions<T extends Portadom<any, any>> {
+  dom: T;
   io: CrawleeOneIO;
   log: Log;
   input: ActorInput;
@@ -54,9 +54,9 @@ const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string
 
 export const jobListingPageActions = {
   // prettier-ignore
-  extractJobOffers: async <T extends DOMLib<any, any>>({ domLib: origDomLib, log, io, listingPageNum = null, onScheduleNextPage, input, onFetchHTML, onData }: ExtractJobOffersOptions<T>) => {
+  extractJobOffers: async <T extends Portadom<any, any>>({ dom: origDom, log, io, listingPageNum = null, onScheduleNextPage, input, onFetchHTML, onData }: ExtractJobOffersOptions<T>) => {
     const { jobOfferCountOnly, outputDatasetId, outputMaxEntries } = input;
-    const origUrl = await origDomLib.url();
+    const origUrl = await origDom.url();
 
     // Navigate to URL that has filters applied
     log.info(`Generating URL that has filters applied. OLD URL: ${origUrl}`);
@@ -65,15 +65,15 @@ export const jobListingPageActions = {
 
     const hasUrlChanged = !equalUrls(origUrl, newUrl);
     
-    let domLib = origDomLib;
+    let dom = origDom;
     if (hasUrlChanged) {
       log.info(`Redirecting to URL that has filters applied. NEW URL: ${newUrl}`);
-      domLib = await onFetchHTML({ url: newUrl }).then((html) => cheerioDOMLib(loadCheerio(html).root(), newUrl) as T);
+      dom = await onFetchHTML({ url: newUrl }).then((html) => cheerioPortadom(loadCheerio(html).root(), newUrl) as T);
     } else {
       log.info(`Generated URL with filters is the same as current URL`);
     }
 
-    const pageCountInfo = await jobListingDOMActions.parsePageCount({ domLib, log }); // prettier-ignore
+    const pageCountInfo = await jobListingDOMActions.parsePageCount({ dom, log }); // prettier-ignore
     if (pageCountInfo) {
       log.info(`Total ${pageCountInfo.total} entries exist for current filter settings. URL: ${newUrl}`);
     }
@@ -84,7 +84,7 @@ export const jobListingPageActions = {
       return;
     }
 
-    const unadjustedEntries = await jobListingDOMActions.extractJobOfferEntries({ domLib, log });
+    const unadjustedEntries = await jobListingDOMActions.extractJobOfferEntries({ dom, log });
     if (!unadjustedEntries.length) {
       log.info('Stopping scraping - no entries found. We assume this is the end of pagination');
       return;
@@ -119,39 +119,38 @@ export const jobListingPageActions = {
 
 export const jobListingDOMActions = {
   // prettier-ignore
-  extractJobOfferEntries: async <T extends DOMLib<any, any>>({ domLib, log }: { domLib: T; log: Log }) => {
+  extractJobOfferEntries: async <T extends Portadom<any, any>>({ dom, log }: { dom: T; log: Log }) => {
     log.info(`Extracting entries from the page`);
-    const rootEl = await domLib.root();
-    const url = await domLib.url();
-    
-    // Find and extract data
-    const entryEls = (await rootEl?.findMany('.list-row:not(.native-agent):not(.reach-list)')) ?? [];
-    const entries = await serialAsyncMap(entryEls, async (el) => {
-      const employerName = (await (await el.findOne('.employer'))?.text()) ?? null;
-      const employerUrl = (await (await el.findOne('.offer-company-logo-link'))?.href({ baseUrl: url })) ?? null; // prettier-ignore
-      const employerLogoUrl = (await (await el.findOne('.offer-company-logo-link img'))?.src({ baseUrl: url })) ?? null; // prettier-ignore
+    const rootEl = await dom.root();
+    const url = await dom.url();
 
-      const offerUrlEl = await el.findOne('h2 a');
-      const offerUrl = await offerUrlEl?.href({ baseUrl: url }) ?? null;
-      const offerName = await offerUrlEl?.text() ?? null;
+    // Find and extract data
+    const entries = await rootEl.findMany('.list-row:not(.native-agent):not(.reach-list)')
+      .mapAsyncSerial(async (el) => {
+      const employerName = await el.findOne('.employer').text();
+      const employerUrl = await el.findOne('.offer-company-logo-link').href(); // prettier-ignore
+      const employerLogoUrl = await el.findOne('.offer-company-logo-link img').src(); // prettier-ignore
+
+      const offerUrlEl = el.findOne('h2 a');
+      const offerUrl = await offerUrlEl.href();
+      const offerName = await offerUrlEl.text();
       const offerId = offerUrl?.match(/O\d{2,}/)?.[0] ?? null;
 
-      const location = (await (await el.findOne('.job-location'))?.text()) ?? null;
+      const location = await el.findOne('.job-location').text();
 
-      const salaryText = (await (await el.findOne('.label-group > a[data-dimension7="Salary label"]'))?.text()) ?? null; // prettier-ignore
+      const salaryText = await el.findOne('.label-group > a[data-dimension7="Salary label"]').text(); // prettier-ignore
       const salaryFields = jobDetailMethods.parseSalaryText(salaryText);
 
-      // prettier-ignore
-      const labelEls = await el.findMany('.label-group > a:not([data-dimension7="Salary label"])') ?? [];
-      const labels = (await serialAsyncMap(labelEls, (el) => el.text()))
-        .filter(Boolean) as string[];
+      const labels = await el.findMany('.label-group > a:not([data-dimension7="Salary label"])')
+        .mapAsyncSerial((el) => el.text())
+        .then((arr) => arr.filter(Boolean) as string[]);
 
-      const footerInfoEl = await el.findOne('.list-footer .info');
-      const lastChangeRelativeTimeEl = await footerInfoEl?.findOne('strong');
-      const lastChangeRelativeTime = await lastChangeRelativeTimeEl?.text() ?? null;
+      const footerInfoEl = el.findOne('.list-footer .info');
+      const lastChangeRelativeTimeEl = footerInfoEl.findOne('strong');
+      const lastChangeRelativeTime = await lastChangeRelativeTimeEl.text();
       // Remove the element so it's easier to get the text content
-      await lastChangeRelativeTimeEl?.remove();
-      const lastChangeTypeText = await footerInfoEl?.textAsLower() ?? null;
+      await lastChangeRelativeTimeEl.remove();
+      const lastChangeTypeText = await footerInfoEl.textAsLower();
       const lastChangeType = lastChangeTypeText === 'pridané' ? 'added' : 'modified';
 
       return {
@@ -178,13 +177,13 @@ export const jobListingDOMActions = {
     return entries;
   },
 
-  parsePageCount: async <T extends DOMLib<any, any>>({ domLib, log }: { domLib: T; log: Log }) => {
+  parsePageCount: async <T extends Portadom<any, any>>({ dom, log }: { dom: T; log: Log }) => {
     log.info('Parsing results count');
-    const rootEl = await domLib.root();
+    const rootEl = dom.root();
 
     const toNum = (t: string) => strAsNumber(t, { removeWhitespace: true, mode: 'int' }) ?? 0;
 
-    const countText = (await (await rootEl?.findOne('.offer-counter'))?.text()) ?? null;
+    const countText = await rootEl.findOne('.offer-counter').text();
     if (!countText) return null;
 
     const [rawCurrRange, rawTotal] = countText.split('z').map((t) => t.trim()) ?? [];

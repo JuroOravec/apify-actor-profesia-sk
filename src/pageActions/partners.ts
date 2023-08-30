@@ -1,7 +1,5 @@
 import type { Log } from 'apify';
-import type { DOMLib } from 'crawlee-one';
-
-import { serialAsyncMap } from '../utils/async';
+import type { Portadom } from 'portadom';
 
 export interface PartnerEntry {
   name: string | null;
@@ -18,59 +16,52 @@ export interface PartnerEntry {
 export const partnersDOMActions = {
   /** Extract partners links from https://www.profesia.sk/partneri */
   // prettier-ignore
-  extractPartnerEntries: async <T extends DOMLib<any, any>>({ domLib, log }: { domLib: T; log: Log }) => {
+  extractPartnerEntries: async <T extends Portadom<any, any>>({ dom, log }: { dom: T; log: Log }) => {
     log.info('Starting extracting partners entries');
-    const rootEl = await domLib.root();
-    const url = await domLib.url();
+    const rootEl = dom.root();
 
     log.info('Collecting partners categories');
-    const tabs = (await rootEl?.findMany('.nav-tabs a')) ?? [];
-    const tabNames = (await serialAsyncMap(tabs, async (el) => {
-      const text = await el.text();
-      return text;
-    })).filter(Boolean) as string[]; // prettier-ignore
+    const tabNames = await rootEl.findMany('.nav-tabs a')
+      .mapAsyncSerial((el) => el.text())
+      .then((arr) => arr.filter(Boolean) as string[]); // prettier-ignore
     log.info(`Found ${tabNames.length} partners categories ${JSON.stringify(tabNames)}`);
 
-    const tabCards = (await rootEl?.findMany('.tab-content .card')) ?? [];
-    const entries = (await serialAsyncMap(tabCards, async (tabCardEl, tabIndex) => {
+    const entries = await rootEl.findMany('.tab-content .card')
+      .mapAsyncSerial(async (tabCardEl, tabIndex) => {
         const category = tabNames[tabIndex];
         log.info(`Extracting entries for category ${category}`);
 
-        const rowEls = await tabCardEl.findMany('.row');
-        const categEntries = await serialAsyncMap(rowEls, (entry) => {
-          return partnersDOMActions.extractSinglePartnerEntry({ url, entry, category }); // prettier-ignore
-        });
+        const categEntries = await tabCardEl.findMany('.row')
+          .mapAsyncSerial((entry) => {
+            return partnersDOMActions.extractSinglePartnerEntry({ entry, category });
+          });
 
         log.info(`Found ${categEntries.length} entries for category ${category}`);
 
         return categEntries;
-      }))
-      .flat(1);
+      }).then((arr) => arr.flat(1));
 
     log.info(`Done extracting partners entries (total ${entries.length})`);
     return entries;
   },
 
-  extractSinglePartnerEntry: async <T extends DOMLib<object, any>>({
+  extractSinglePartnerEntry: async <T extends Portadom<object, any>>({
     entry,
-    url: baseUrl,
     category,
   }: {
     entry: T;
-    url: string | null;
     category: string;
   }) => {
-    const logoEl = await entry.findOne('img');
-    const logoUrl = (await logoEl?.src({ baseUrl })) ?? null;
+    const logoUrl = await entry.findOne('img').src();
 
-    const infoEl = await entry.findOne('div:nth-child(2)');
-    const urlEl = await infoEl?.findOne('a');
-    const url = (await urlEl?.href({ baseUrl })) ?? null;
-    const name = (await urlEl?.text()) ?? null;
+    const infoEl = entry.findOne('div:nth-child(2)');
+    const urlEl = infoEl.findOne('a');
+    const url = await urlEl.href();
+    const name = await urlEl.text();
 
     // Remove el so description text is easy to take
-    await urlEl?.remove();
-    const description = (await infoEl?.text()) ?? null;
+    await urlEl.remove();
+    const description = await infoEl.text();
 
     return { name, url, description, logoUrl, category } satisfies PartnerEntry;
   },

@@ -2,12 +2,12 @@ import { CheerioCrawlingContext } from 'crawlee';
 import * as cheerio from 'cheerio';
 import {
   createCheerioRouteMatchers,
-  cheerioDOMLib,
   RouteHandler,
   PushDataOptions,
   ActorRouterContext,
   apifyIO,
 } from 'crawlee-one';
+import { cheerioPortadom } from 'portadom';
 
 import { GenericListEntry, jobRelatedListsPageActions } from './pageActions/jobRelatedLists';
 import { partnersDOMActions } from './pageActions/partners';
@@ -72,9 +72,9 @@ export const routes = createCheerioRouteMatchers<
     name: 'Company detail - custom',
     handlerLabel: null,
     match: async (url, ctx) => {
-      const domLib = cheerioDOMLib(ctx.$.root(), url);
-      const isCustomDesign = !!(await domLib.findMany('body.listing.custom-design')).length;
-      return isUrlOfCompanyProfile(url) && isCustomDesign;
+      const dom = cheerioPortadom(ctx.$.root(), url);
+      const isCustomDesign = await dom.findMany('body.listing.custom-design').length;
+      return isUrlOfCompanyProfile(url) && !!isCustomDesign;
     },
     action: (url, { log }) => { log.error(`UNSUPPORTED PAGE TYPE DETECTED - company page with custom design. These are not supported. URL will not be processed. URL: ${url}`); }, // prettier-ignore
   },
@@ -87,10 +87,9 @@ export const routes = createCheerioRouteMatchers<
     // Eg consider this https://www.profesia.sk/praca/123kurier/C238652
     handlerLabel: ROUTE_LABEL_ENUM.JOB_LISTING,
     match: async (url, ctx) => {
-      const domLib = cheerioDOMLib(ctx.$.root(), url);
-      const isNotCustomDesign = !!(await domLib.findMany('body.listing:not(.custom-design)'))
-        .length;
-      return isUrlOfCompanyProfile(url) && isNotCustomDesign;
+      const dom = cheerioPortadom(ctx.$.root(), url);
+      const isNotCustomDesign = await dom.findMany('body.listing:not(.custom-design)').length;
+      return isUrlOfCompanyProfile(url) && !!isNotCustomDesign;
     },
   },
 
@@ -156,8 +155,8 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
           log.info(`Done fetching details page (ID: ${entry.offerId}) URL: ${entry.offerUrl}`);
 
           const cheerioDom = cheerio.load(entryHtml);
-          const domLib = cheerioDOMLib(cheerioDom.root(), entry.offerUrl);
-          const jobDetail = await jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: entry }); // prettier-ignore
+          const dom = cheerioPortadom(cheerioDom.root(), entry.offerUrl);
+          const jobDetail = await jobDetailDOMActions.extractJobDetail({ dom, log, jobData: entry }); // prettier-ignore
 
           // Push the data after each scraped page to limit the chance of losing data
           await Promise.all([
@@ -173,10 +172,10 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
         }
       };
 
-      const domLib = cheerioDOMLib(ctx.$.root(), request.loadedUrl || request.url);
+      const dom = cheerioPortadom(ctx.$.root(), request.loadedUrl || request.url);
       const listingPageNum = request.userData?.listingPageNum || 1;
       await jobListingPageActions.extractJobOffers({
-        domLib,
+        dom,
         io: apifyIO,
         log,
         input,
@@ -198,8 +197,8 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
     JOB_DETAIL: async (ctx) => {
       const { log, request } = ctx;
 
-      const domLib = cheerioDOMLib(ctx.$.root(), request.loadedUrl || request.url);
-      const entry = await jobDetailDOMActions.extractJobDetail({ domLib, log, jobData: request.userData?.offer }); // prettier-ignore
+      const dom = cheerioPortadom(ctx.$.root(), request.loadedUrl || request.url);
+      const entry = await jobDetailDOMActions.extractJobDetail({ dom, log, jobData: request.userData?.offer }); // prettier-ignore
       await ctx.actor.pushData(entry, ctx, {
         ...pushDataOptions,
         privacyMask: {
@@ -220,13 +219,13 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
       };
 
       const url = request.loadedUrl || request.url;
-      const domLib = cheerioDOMLib(ctx.$.root(), url);
+      const dom = cheerioPortadom(ctx.$.root(), url);
       const isLocationsPage = url.match(/[\W]profesia\.sk\/praca\/zoznam-lokalit/i); // prettier-ignore
       const extractFn = isLocationsPage
         ? jobRelatedListsPageActions.extractLocationsLinks
         : jobRelatedListsPageActions.extractGenericLinks;
       await extractFn({
-        domLib,
+        dom,
         log,
         onFetchHTML: (opts) => ctx.sendRequest(opts).then((d) => d.body),
         onData,
@@ -234,9 +233,8 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
     },
 
     PARTNERS: async (ctx) => {
-      const domLib = cheerioDOMLib(ctx.$.root(), ctx.request.loadedUrl || ctx.request.url);
-
-      const entries = await partnersDOMActions.extractPartnerEntries({ domLib, log: ctx.log });
+      const dom = cheerioPortadom(ctx.$.root(), ctx.request.loadedUrl || ctx.request.url);
+      const entries = await partnersDOMActions.extractPartnerEntries({ dom, log: ctx.log });
 
       await ctx.actor.pushData(entries, ctx, {
         ...pushDataOptions,

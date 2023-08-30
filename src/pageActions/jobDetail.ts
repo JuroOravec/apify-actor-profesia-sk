@@ -1,6 +1,6 @@
 import type { Log } from 'apify';
 import { chunk } from 'lodash';
-import type { DOMLib } from 'crawlee-one';
+import type { Portadom, PortadomPromise } from 'portadom';
 
 import {
   EmploymentType,
@@ -11,7 +11,6 @@ import {
   DetailedProfesiaSKJobOfferItem,
   SALARY_PERIOD_ENUM,
 } from '../types';
-import { serialAsyncMap } from '../utils/async';
 
 const employmentTypeInfo: Record<EmploymentType, { urlPath: string; text: string }> = {
   fte: { urlPath: 'plny-uvazok', text: 'plný úväzok' },
@@ -58,12 +57,12 @@ export const jobDetailDOMActions = {
   // - https://www.profesia.sk/praca/accenture/O4491399
   // - https://www.profesia.sk/praca/gohealth/O3964543
   // - https://www.profesia.sk/praca/ing-lukas-hromjak/O4068250
-  extractJobDetail: async <T extends DOMLib<any, any>>({
-    domLib,
+  extractJobDetail: async <T extends Portadom<any, any>>({
+    dom,
     log,
     jobData,
   }: {
-    domLib: T;
+    dom: T;
     log: Log;
     /**
      * In case we've come across this job ad on a listing page, we pass it here
@@ -71,20 +70,20 @@ export const jobDetailDOMActions = {
     jobData?: SimpleProfesiaSKJobOfferItem;
   }) => {
     log.info(`Extracting job details from the page`);
-    const rootEl = await domLib.root();
+    const rootEl = dom.root();
 
-    const containerEl = await rootEl?.findOne('#content .container');
-    const entryEl = (await containerEl?.findOne('#detail .card-content')) ?? null;
+    const containerEl = rootEl.findOne('#content .container');
+    const entryEl = containerEl.findOne('#detail .card-content');
 
-    const labelEls = (await containerEl?.findMany('.label')) ?? [];
-    const labels = (await serialAsyncMap(labelEls, (el) => el.textAsLower())).filter(
-      Boolean
-    ) as string[];
+    const labels = await containerEl
+      .findMany('.label')
+      .mapAsyncSerial((el) => el.textAsLower())
+      .then((arr) => arr.filter(Boolean) as string[]);
 
-    const offerUrl = await domLib.url();
+    const offerUrl = await dom.url();
     const offerId = offerUrl?.match(/O\d{2,}/)?.[0] ?? null;
 
-    const salaryText = (await (await entryEl?.findOne('.salary-range'))?.text()) ?? null;
+    const salaryText = await entryEl.findOne('.salary-range').text();
     const salaryFields = jobDetailMethods.parseSalaryText(salaryText);
 
     const basicFields = await jobDetailDOMActions.extractJobDetailBasicInfo(entryEl);
@@ -112,28 +111,30 @@ export const jobDetailDOMActions = {
     return entry;
   },
 
-  extractJobDetailBasicInfo: async <T extends DOMLib<object, any>>(domLib: T | null) => {
-    const offerName = (await (await domLib?.findOne('[itemprop="title"]'))?.text()) ?? null;
+  extractJobDetailBasicInfo: async <T extends Portadom<any, any> | PortadomPromise<any, any>>(
+    dom: T
+  ) => {
+    const offerName = await dom.findOne('[itemprop="title"]').text();
 
-    const baseUrl = (await domLib?.url()) ?? null;
-    const employerName = await (await domLib?.findOne('[itemprop="hiringOrganization"]'))?.text() ?? null; // prettier-ignore
-    const employerUrl = await (await domLib?.findOne('.easy-design-btn-offer-list'))?.href({ baseUrl }) ?? null; // prettier-ignore
-    const employerLogoUrl = await (await domLib?.findOne('.easy-design-logo img'))?.src({ baseUrl }) ?? null; // prettier-ignore
+    const employerName = await dom.findOne('[itemprop="hiringOrganization"]').text();
+    const employerUrl = await dom.findOne('.easy-design-btn-offer-list').href();
+    const employerLogoUrl = await dom.findOne('.easy-design-logo img').src();
 
-    const employmentTypesText = await (await domLib?.findOne('[itemprop="employmentType"]'))?.text() ?? null; // prettier-ignore
+    const employmentTypesText = await dom.findOne('[itemprop="employmentType"]').text();
     const employmentTypes = Object.entries(employmentTypeInfo).reduce<EmploymentType[]>((agg, [key, { text }]) => {
       if (employmentTypesText?.includes(text)) agg.push(key as EmploymentType);
       return agg;
     }, []); // prettier-ignore
 
-    const startDate = await (await domLib?.findOne('.panel-body > .row:nth-child(2) > div:nth-child(1) span'))?.text() ?? null; // prettier-ignore
-    const location = (await (await domLib?.findOne('[itemprop="jobLocation"]'))?.text()) ?? null;
+    const startDate = await dom.findOne('.panel-body > .row:nth-child(2) > div:nth-child(1) span').text(); // prettier-ignore
+    const location = await dom.findOne('[itemprop="jobLocation"]').text();
 
-    const phoneEls = (await domLib?.findMany('.details-section .tel')) ?? [];
-    const phoneNumbers = (await serialAsyncMap(phoneEls, (el) => el.text()))
-      .filter(Boolean) as string[]; // prettier-ignore
+    const phoneNumbers = await dom
+      .findMany('.details-section .tel')
+      .mapAsyncSerial((el) => el.text())
+      .then((arr) => arr.filter(Boolean) as string[]);
 
-    const datePosted = (await (await domLib?.findOne('[itemprop="datePosted"]'))?.text()) ?? null;
+    const datePosted = await dom.findOne('[itemprop="datePosted"]').text();
 
     return {
       offerName,
@@ -148,15 +149,17 @@ export const jobDetailDOMActions = {
     };
   },
 
-  extractJobDetailDescriptionInfo: <T extends DOMLib<object, any>>(domLib: T | null) => {
+  extractJobDetailDescriptionInfo: <T extends Portadom<any, any> | PortadomPromise<any, any>>(
+    dom: T
+  ) => {
     const descriptionInfo = descriptionSections.reduce<
       Promise<ProfesiaSkJobOfferDescriptionFields>
     >(async (promiseAgg, { subsections, selector }) => {
       const agg = await promiseAgg;
-      const sectionEl = await domLib?.findOne(selector);
-      await (await sectionEl?.findOne('.subtitle-line'))?.remove();
+      const sectionEl = dom.findOne(selector);
+      await sectionEl.findOne('.subtitle-line').remove();
 
-      const sectionEls = (await sectionEl?.children()) ?? [];
+      const sectionEls = await sectionEl.children().promise;
       for (const [titleEl, contentEl] of chunk(sectionEls, 2)) {
         const titleText = await titleEl.textAsLower();
 
@@ -164,8 +167,7 @@ export const jobDetailDOMActions = {
           const textMatches = fragments.some((text: string) => titleText?.includes(text));
           if (!textMatches) continue;
 
-          const greyTextEls = (await contentEl?.findMany('.text-gray')) ?? [];
-          await serialAsyncMap(greyTextEls, (el) => el.remove());
+          await contentEl.findMany('.text-gray').mapAsyncSerial((el) => el.remove());
 
           const key = subsection as keyof ProfesiaSkJobOfferDescriptionFields;
           agg[key] = await contentEl.text();
@@ -178,36 +180,37 @@ export const jobDetailDOMActions = {
     return descriptionInfo;
   },
 
-  extractJobDetailCategories: async <T extends DOMLib<object, any>>(domLib: T | null) => {
-    const baseUrl = await domLib?.url();
-
+  extractJobDetailCategories: async <T extends Portadom<any, any> | PortadomPromise<any, any>>(
+    dom: T
+  ) => {
     const locationCategs: JobOfferCategoryItem[] = [];
     const professionCategs: JobOfferCategoryItem[] = [];
 
     let currHeading: string | null = null;
-    // prettier-ignore
-    const children = await (await domLib?.findOne('.overall-info .hidden-xs'))?.children() ?? [];
-    for (const el of children) {
-      const nodeName = await el.nodeName();
-      if (nodeName === 'STRONG') {
-        currHeading = await el.textAsLower();
-        continue;
-      }
+    await dom
+      .findOne('.overall-info .hidden-xs')
+      .children()
+      .forEachAsyncSerial(async (el) => {
+        const nodeName = await el.nodeName();
+        if (nodeName === 'STRONG') {
+          currHeading = await el.textAsLower();
+          return;
+        }
 
-      if (nodeName === 'A' && currHeading?.includes('lokalit')) {
-        locationCategs.push({
-          url: await el.href({ baseUrl }),
-          name: await el.text(),
-        });
-      }
+        if (nodeName === 'A' && currHeading?.includes('lokalit')) {
+          locationCategs.push({
+            url: await el.href(),
+            name: await el.text(),
+          });
+        }
 
-      if (nodeName === 'A' && currHeading?.includes('pozícia')) {
-        professionCategs.push({
-          url: await el.href({ baseUrl }),
-          name: await el.text(),
-        });
-      }
-    }
+        if (nodeName === 'A' && currHeading?.includes('pozícia')) {
+          professionCategs.push({
+            url: await el.href(),
+            name: await el.text(),
+          });
+        }
+      });
 
     return { locationCategs, professionCategs };
   },
