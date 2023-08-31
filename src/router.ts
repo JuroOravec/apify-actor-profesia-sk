@@ -1,7 +1,7 @@
-import { CheerioCrawlingContext } from 'crawlee';
+import type { CheerioCrawlingContext } from 'crawlee';
 import * as cheerio from 'cheerio';
 import {
-  createCheerioRouteMatchers,
+  createCheerioRoutes,
   CrawleeOneRouteHandler,
   PushDataOptions,
   CrawleeOneActorRouterCtx,
@@ -36,7 +36,7 @@ const isUrlOfJobOffer = (url: string) =>
   // Url has /O123456 in its path (first is letter, not zero) - eg https://www.profesia.sk/praca/gohealth/O3964543
   url.match(/\/praca\/.*?\/O[0-9]{2,}/);
 
-export const routes = createCheerioRouteMatchers<RouteLabel, ProfesiaRouterContext>([
+export const routes = createCheerioRoutes<RouteLabel, ProfesiaRouterContext>([
   {
     // Check if user give us URL of the main page. If so, redirect them to job listing page https://www.profesia.sk/praca
     name: 'Main page',
