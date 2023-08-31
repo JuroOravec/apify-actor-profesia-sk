@@ -2,9 +2,9 @@ import { CheerioCrawlingContext } from 'crawlee';
 import * as cheerio from 'cheerio';
 import {
   createCheerioRouteMatchers,
-  RouteHandler,
+  CrawleeOneRouteHandler,
   PushDataOptions,
-  ActorRouterContext,
+  CrawleeOneActorRouterCtx,
   apifyIO,
 } from 'crawlee-one';
 import { cheerioPortadom } from 'portadom';
@@ -18,7 +18,7 @@ import { jobDetailDOMActions } from './pageActions/jobDetail';
 import { wait } from './utils/async';
 import type { ActorInput } from './config';
 
-type ProfesiaRouterContext = ActorRouterContext<
+type ProfesiaRouterContext = CrawleeOneActorRouterCtx<
   CheerioCrawlingContext<any, any>,
   RouteLabel,
   ActorInput
@@ -86,7 +86,7 @@ export const routes = createCheerioRouteMatchers<
     // Company page with standard design is just a job listing with extra infobox for the company.
     // Eg consider this https://www.profesia.sk/praca/123kurier/C238652
     handlerLabel: ROUTE_LABEL_ENUM.JOB_LISTING,
-    match: async (url, ctx) => {
+    match: async (url, ctx, route, handlers) => {
       const dom = cheerioPortadom(ctx.$.root(), url);
       const isNotCustomDesign = await dom.findMany('body.listing:not(.custom-design)').length;
       return isUrlOfCompanyProfile(url) && !!isNotCustomDesign;
@@ -241,5 +241,5 @@ export const createHandlers = <Ctx extends CheerioCrawlingContext>(input: ActorI
         privacyMask: {},
       });
     },
-  } satisfies Record<RouteLabel, RouteHandler<Ctx, ProfesiaRouterContext>>;
+  } satisfies Record<RouteLabel, CrawleeOneRouteHandler<Ctx, ProfesiaRouterContext>>;
 };

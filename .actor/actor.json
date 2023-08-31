@@ -550,11 +550,11 @@
         "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$",
         "nullable": true
       },
-      "errorSendToSentry": {
+      "errorSendToTelemetry": {
         "title": "Send errors to Sentry",
         "type": "boolean",
         "editor": "checkbox",
-        "description": "Whether to send actor error reports to <a href=\"https://sentry.io/\">Sentry</a>.<br/>\n    This info is used by the author of this actor to identify broken integrations,\n    and track down and fix issues.",
+        "description": "Whether to report actor errors to telemetry such as <a href=\"https://sentry.io/\">Sentry</a>.<br/>\n    This info is used by the author of this actor to identify broken integrations,\n    and track down and fix issues.",
         "example": true,
         "default": true,
         "nullable": true
