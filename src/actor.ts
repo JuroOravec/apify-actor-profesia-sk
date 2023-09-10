@@ -1,11 +1,19 @@
 import type { CheerioCrawlerOptions } from 'crawlee';
-import { runCrawleeOne, createSentryTelemetry } from 'crawlee-one';
+import { crawleeOne, createSentryTelemetry } from 'crawlee-one';
 
-import { createHandlers, routes } from './router';
+import {
+  companyDetailCustomRoute,
+  jobDetailRoute,
+  jobListingRoute,
+  jobRelatedListRoute,
+  mainPageRoute,
+  partnersRoute,
+} from './routes';
 import { datasetTypeToUrl } from './constants';
 import { validateInput } from './validation';
 import { getPackageJsonInfo } from './utils/package';
-import type { RouteLabel } from './types';
+import { profesiaCrawler } from './__generated__/crawler';
+import type { ActorInput } from './config';
 
 // Flow:
 // 1 Jobs (https://www.profesia.sk/praca/)
@@ -92,24 +100,74 @@ export const run = async (crawlerConfigOverrides?: CheerioCrawlerOptions): Promi
     serverName: pkgJson.name,
   });
 
-  await runCrawleeOne<'cheerio', RouteLabel>({
-    actorType: 'cheerio',
-    actorName: pkgJson.name,
-    actorConfig: {
-      telemetry,
-      validateInput,
-      routes,
-      routeHandlers: ({ input }) => createHandlers(input!),
-    },
-    crawlerConfigDefaults,
-    crawlerConfigOverrides,
-    onActorReady: async (actor) => {
-      const startUrls: string[] = [];
-      if (!actor.input?.startUrls && actor.input?.datasetType) {
-        startUrls.push(datasetTypeToUrl[actor.input?.datasetType]);
-      }
+  await crawleeOne<'cheerio'>({
+    // Use the 'cheerio' crawlee Crawleer class
+    type: 'cheerio',
+    routes: {
+      mainPage: {
+        // Use this handler if its URL matches this regex
+        match: /example\.com\/home/i,
+        handler: async (ctx) => {
+          const { $, pushData, pushRequests } = ctx;
 
-      await actor.runCrawler(startUrls);
+          // NOTE: The Cheerio Crawler automatically parses the HTML to Cheerio
+          const posts = $('.post');
+          const data = posts.toArray().map((el) => {
+            const title = ctx.$(el).find('.title').text();
+            const author = ctx.$(el).find('.author').text();
+            return { title, author };
+          });
+
+          // Save the scraped data by "pushing them to the dataset"
+          // By default, if running locally, the data will be saved to `./storage/datasets/default`
+          await pushData(
+            data, // Data to push to the dataset
+            { privacyMask: { author: true } } // Declare private fields
+          );
+
+          // Enqueue more URLs to scrape by "pushing them to the request queue"
+          // By default, if running locally, this is available at `./storage/requests_queues/default`
+          const nextPageUrl = $('.next-page').prop('href');
+          if (nextPageUrl) await pushRequests({ url: nextPageUrl });
+        },
+      },
+    },
+  });
+
+  await crawleeOne<'playwright'>({
+    type: 'playwright',
+    routes: {
+      mainPage: {
+        match: /example\.com\/home/i,
+        handler: (ctx) => {
+          ctx.parseWithCheerio();
+          // ...
+        },
+      },
+    },
+  });
+
+  await profesiaCrawler<ActorInput>({
+    telemetry,
+    crawlerConfig: crawlerConfigOverrides,
+    crawlerConfigDefaults,
+    hooks: {
+      validateInput,
+      onReady: async (actor) => {
+        const startUrls: string[] = [];
+        if (!actor.startUrls.length && actor.input?.datasetType) {
+          startUrls.push(datasetTypeToUrl[actor.input?.datasetType]);
+        }
+        await actor.runCrawler(startUrls);
+      },
+    },
+    routes: {
+      mainPage: mainPageRoute,
+      jobDetail: jobDetailRoute,
+      companyDetailCustom: companyDetailCustomRoute,
+      jobRelatedList: jobRelatedListRoute,
+      jobListing: jobListingRoute,
+      partners: partnersRoute,
     },
   });
 };

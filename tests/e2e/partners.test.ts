@@ -4,14 +4,14 @@ import { runCrawlerTest } from 'crawlee-one';
 
 import { partnerEntryValidation } from '../utils/assert';
 import { run } from '../../src/actor';
-import { ROUTE_LABEL_ENUM } from '../../src/types';
 import type { ActorInput } from '../../src/config';
+import { profesiaLabelEnum } from '../../src/__generated__/crawler';
 
 const log = (...args) => console.log(...args);
 const runCrawler = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
 describe(
-  ROUTE_LABEL_ENUM.PARTNERS,
+  profesiaLabelEnum.partners,
   () => {
     beforeEach(() => {
       vi.resetAllMocks();

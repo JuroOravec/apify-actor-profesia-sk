@@ -1,8 +1,9 @@
 import type { DatasetFeatures, DatasetModes, DatasetOutput } from 'actor-spec';
-import type { ApifyScraperActorSpec, ApifyEntryMetadata } from 'crawlee-one';
+import type { ApifyEntryMetadata } from 'crawlee-one';
 import { fromPairs } from 'lodash';
 
 import type { DetailedProfesiaSKJobOfferItem, SimpleProfesiaSKJobOfferItem } from './types';
+import type { ApifyScraperActorSpec } from './utils/readme/apify/types';
 
 type JobOfferDetailedFields = Exclude<keyof DetailedProfesiaSKJobOfferItem, keyof SimpleProfesiaSKJobOfferItem>; // prettier-ignore
 const jobOfferDetailedField: JobOfferDetailedFields[] = [

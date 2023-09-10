@@ -1,4 +1,4 @@
-import { ApifyReadmeTemplatesOverrides, renderApifyReadme } from 'crawlee-one';
+import { ApifyReadmeTemplatesOverrides, renderApifyReadme } from './utils/readme/apify/readme';
 
 import actorSpec from './actorspec';
 

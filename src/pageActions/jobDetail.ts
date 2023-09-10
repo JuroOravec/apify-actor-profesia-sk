@@ -60,14 +60,14 @@ export const jobDetailDOMActions = {
   extractJobDetail: async <T extends Portadom<any, any>>({
     dom,
     log,
-    jobData,
+    entry,
   }: {
     dom: T;
     log: Log;
     /**
      * In case we've come across this job ad on a listing page, we pass it here
      * in case there's some data that was available then which is not here */
-    jobData?: SimpleProfesiaSKJobOfferItem;
+    entry?: SimpleProfesiaSKJobOfferItem;
   }) => {
     log.info(`Extracting job details from the page`);
     const rootEl = dom.root();
@@ -90,12 +90,12 @@ export const jobDetailDOMActions = {
     const descriptionFields = await jobDetailDOMActions.extractJobDetailDescriptionInfo(entryEl); // prettier-ignore
     const categFields = await jobDetailDOMActions.extractJobDetailCategories(entryEl);
 
-    const entry = {
+    const data = {
       // Add the fields we've got from listing page
-      ...jobData,
-      listingUrl: jobData?.listingUrl ?? null,
-      lastChangeRelativeTime: jobData?.lastChangeRelativeTime ?? null,
-      lastChangeType: jobData?.lastChangeType ?? null,
+      ...entry,
+      listingUrl: entry?.listingUrl ?? null,
+      lastChangeRelativeTime: entry?.lastChangeRelativeTime ?? null,
+      lastChangeType: entry?.lastChangeType ?? null,
 
       ...basicFields,
       ...salaryFields,
@@ -107,8 +107,8 @@ export const jobDetailDOMActions = {
       labels,
     } satisfies DetailedProfesiaSKJobOfferItem;
 
-    log.info(`Done extracting job details from the page (ID: ${entry.offerId})`);
-    return entry;
+    log.info(`Done extracting job details from the page (ID: ${data.offerId})`);
+    return data;
   },
 
   extractJobDetailBasicInfo: async <T extends Portadom<any, any> | PortadomPromise<any, any>>(

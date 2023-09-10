@@ -8,8 +8,8 @@ import {
   joiStrNotEmptyNullable,
 } from '../utils/assert';
 import { run } from '../../src/actor';
-import { ROUTE_LABEL_ENUM } from '../../src/types';
 import type { ActorInput } from '../../src/config';
+import { profesiaLabelEnum } from '../../src/__generated__/crawler';
 
 const runCrawler = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
@@ -30,7 +30,7 @@ const jobDetailCustomUrls = [
 ];
 
 describe(
-  ROUTE_LABEL_ENUM.JOB_DETAIL,
+  profesiaLabelEnum.jobDetail,
   () => {
     beforeEach(() => {
       vi.resetAllMocks();

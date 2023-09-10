@@ -19,10 +19,6 @@ export type EmploymentType = ArrVal<typeof EMPLOYMENT_TYPE>;
 export const DATASET_TYPE = ['jobOffers', 'industries', 'professions', 'companies', 'languages', 'locations', 'partners'] as const; // prettier-ignore
 export type DatasetType = ArrVal<typeof DATASET_TYPE>;
 
-export const ROUTE_LABELS = ['JOB_LISTING', 'JOB_DETAIL', 'JOB_RELATED_LIST', 'PARTNERS'] as const;
-export const ROUTE_LABEL_ENUM = enumFromArray(ROUTE_LABELS);
-export type RouteLabel = ArrVal<typeof ROUTE_LABELS>;
-
 export interface SimpleProfesiaSKJobOfferItem extends ProfesiaSkJobOfferSalaryFields {
   /** Listing URL from which this entry was taken. E.g. `"https://www.profesia.sk/praca/` */
   listingUrl: string | null;

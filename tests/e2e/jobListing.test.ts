@@ -8,10 +8,11 @@ import {
   joiEmploymentType,
   joiStrNotEmptyNullable,
 } from '../utils/assert';
-import { ROUTE_LABEL_ENUM, SimpleProfesiaSKJobOfferItem } from '../../src/types';
+import type { SimpleProfesiaSKJobOfferItem } from '../../src/types';
 import { sortUrl } from '../../src/utils/url';
 import { run } from '../../src/actor';
 import type { ActorInput } from '../../src/config';
+import { profesiaLabelEnum } from '../../src/__generated__/crawler';
 
 const runCrawler = () => run({ useSessionPool: false, maxRequestRetries: 0 });
 
@@ -32,7 +33,7 @@ const customJobOfferValidation = detailedJobOfferValidation.keys({
 });
 
 describe(
-  ROUTE_LABEL_ENUM.JOB_LISTING,
+  profesiaLabelEnum.jobListing,
   () => {
     beforeEach(() => {
       vi.resetAllMocks();
